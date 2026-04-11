@@ -1,0 +1,141 @@
+# ============================================================
+# .dev-config.yaml
+# AI Agent 개발 설정 파일
+# 에이전트는 개발 시작 전 이 파일을 파싱하여 설정값을 적용한다.
+# Notion Config 페이지와 동기화 유지할 것.
+# ============================================================
+
+# ① 코드 구조 다이어그램 설정
+diagram:
+  status: ON
+  style: "mermaid"              # mermaid / plantuml / d2
+  detail_level: "script"        # script=파일단위 / function=함수단위
+  direction: "TD"               # TD: top-down / LR: left-right
+  output_location: "docs/diagrams/"
+  auto_update: true
+
+# ② 코드별 기능명세 설정
+spec:
+  status: ON
+  generate_spec: true
+  output_location: "docs/specs/"
+  template:
+    - 파일명
+    - 파일 경로
+    - 목적/역할
+    - 주요 함수 목록 (함수명, 파라미터, 반환값, 설명)
+    - 의존성 (import/require 대상)
+    - 변경 이력
+
+# ③ 코드 요약 (파일 헤더 주석) 설정
+header:
+  status: ON
+  fields:
+    file_name: true
+    description: true
+    author: true
+    created_date: true
+    last_modified_by: true
+    last_modified_date: true
+    version: false
+    change_log: true
+  date_format: "YYYY-MM-DD"
+  comment_style: "auto"         # auto=언어에 맞게 자동
+
+# ④ 제약사항 설정
+constraints:
+  status: ON
+
+  # 4-1. 명명법
+  naming_convention:
+    variable: "snake_case"
+    function: "snake_case"
+    class: "PascalCase"
+    constant: "UPPER_SNAKE_CASE"
+    file: "snake_case"
+
+  # 4-2. 참고문서/URL 매핑 (프로젝트별로 채워넣을 것)
+  reference_mapping:
+    - feature: "[기능명]"
+      url: "[문서 URL]"
+      description: "[설명]"
+
+  # 4-3. 로그 작성 규칙
+  logging:
+    levels:
+      DEBUG:
+        color: "gray"
+        format: "[DEBUG][{timestamp}][{module}] {message}"
+      INFO:
+        color: "blue"
+        format: "[INFO][{timestamp}][{module}] {message}"
+      WARNING:
+        color: "yellow"
+        format: "[WARN][{timestamp}][{module}] {message}"
+      ERROR:
+        color: "red"
+        format: "[ERROR][{timestamp}][{module}] {message}"
+        action: "이슈관리 DB에 자동 등록"
+    timestamp_format: "YYYY-MM-DD HH:mm:ss"
+
+  # 4-4. 예외처리 규칙
+  exception_handling:
+    strategy: "try-catch-log"
+    rules:
+      - "모든 외부 API 호출은 반드시 try-catch로 감싸야 한다"
+      - "catch 블록에서는 반드시 ERROR 레벨 로그를 남겨야 한다"
+      - "사용자 정의 예외 클래스를 사용할 것 (CustomError 등)"
+      - "예외 발생 시 상위 호출자에게 전파 여부를 명시할 것"
+
+# ⑤ Workflow 설정 (Agent ↔ GitHub ↔ Notion 연동)
+workflow:
+  status: ON
+
+  infrastructure:
+    agent: "Claude"
+    vcs: "GitHub"
+    knowledge_base: "Notion"
+
+  github_to_notion:
+    triggers:
+      - event: "commit"
+        target_db: "이슈관리"
+        record_fields: [commit_hash, message, author, timestamp, changed_files]
+        condition: "always"
+      - event: "push"
+        target_db: "이슈관리"
+        record_fields: [branch, commit_count, author, timestamp]
+        condition: "always"
+      - event: "pull_request"
+        target_db: "이슈관리"
+        record_fields: [pr_title, pr_body, author, reviewers, status]
+        condition: "on_create_and_merge"
+      - event: "error_log"
+        target_db: "이슈관리"
+        record_fields: [error_message, stack_trace, module, timestamp]
+        condition: "when ERROR level log is detected"
+
+  notion_to_agent:
+    references:
+      - page: "개발 가이드"
+        priority: "필수"
+        description: "모든 개발 작업 전 이 가이드를 읽고 준수할 것"
+      - page: "Config"
+        priority: "필수"
+        description: "설정값과 제약사항을 반영할 것"
+      - page: "WBS"
+        priority: "참고"
+        description: "현재 작업 항목의 범위와 일정을 확인할 것"
+      - page: "RFP > 가공 데이터"
+        priority: "참고"
+        description: "개발 배경과 요구사항을 이해할 것"
+
+  development_cycle:
+    steps:
+      1: "에이전트는 Notion의 '개발 가이드' + 'Config' 페이지를 먼저 읽는다"
+      2: "WBS에서 현재 작업할 항목을 확인한다"
+      3: "GitHub 저장소에서 관련 코드를 확인/작성한다"
+      4: "Config의 제약사항(명명법, 로그, 헤더 등)을 반영하여 코드를 작성한다"
+      5: "commit/push 시 Notion 이슈관리 DB에 자동 기록한다"
+      6: "코드 구조 다이어그램, 기능명세를 갱신한다"
+      7: "WBS의 진도율을 업데이트한다"
