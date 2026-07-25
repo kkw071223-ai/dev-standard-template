@@ -317,7 +317,19 @@ than guess. That is a far better loop than trial-and-error against an opaque too
 ### Different converters fail different requirements
 
 Running the same pipeline on the MuJoCo cartpole surfaced a requirement the URDF robot
-never hit:
+never hit. The cause is a structural difference in how the two converters represent a
+link, confirmed by listing every GPrim with its purpose and collider status:
+
+| | arm2 (URDF) | cartpole (MuJoCo) |
+|---|---|---|
+| visual geometry | `purpose=default`, no `CollisionAPI` | **one prim does both** — `purpose=default` *and* `CollisionAPI` |
+| collision geometry | separate prims, `purpose=guide` | (same prims as above) |
+| in scope for VM.MAT.001 | visual only — materials came from `<material>` tags → pass | the dual-purpose prims, which have no material → **fail** |
+
+The URDF converter separates the two representations and marks the collision copy
+`purpose=guide`, which exempts it from VM.MAT.001. The MuJoCo converter reuses one prim
+for both, so that prim is in scope for the material check. Neither is wrong — it is a
+difference in convention, and it is invisible until you run both.
 
 | | URDF `arm2` | MuJoCo `cartpole` |
 |---|---|---|
@@ -401,6 +413,46 @@ Closed-loop ovstage output read completed successfully
 
 So rigid-body regression tests are CI-able on plain runners. Soft-body and particle work
 is not.
+
+### `ovstream` is the one library with no CPU path
+
+The developer page summarizes `ovstream` as "high-throughput GPU data sharing", which
+reads like a storage or IPC layer. The installed package is something else: a
+**GStreamer-based pixel-streaming and remote-input library** — the transport that carries
+a rendered viewport to a client and carries mouse/keyboard/gamepad/touch back.
+
+```
+$ python -c "import ovstream; print(ovstream.__doc__)"
+OVSTREAM SDK Python bindings.
+    ovstream.initialize()
+    with ovstream.Server(ovstream.ServerType.RTSP) as server:
+        server.start(ovstream.ServerConfig(width=1920, height=1080))
+
+ServerType     : WEBRTC, NATIVE, RTSP, SHM, CUDASHM
+ClientType     : SHM, CUDASHM, NATIVE
+InputEventType : KEYBOARD, MOUSE, GAMEPAD, TOUCH
+frame types    : VideoFrame, AudioFrame, CudaSync
+ServerConfig   : width, height, target_fps, stream_port, webrtc_signal_port,
+                 webrtc_public_ip, rtsp_mount_point, rtsp_pipeline,
+                 shm_stream_name, shm_slot_count, cudashm_*, cuda_context, cuda_device
+```
+
+The wheel ships `libgstrtspserver`, `libgstvideo`, `libgstapp` and `libcudart.so.12`, plus
+a second package `ovstream_utils` (`Loop`, `LoopConfig`, `Stats`, `Tick`) for driving a
+frame loop.
+
+```
+$ python -c "import ovstream; ovstream.initialize()"
+OSError: libcuda.so.1: cannot open shared object file: No such file or directory
+```
+
+**It imports on CPU but cannot initialize.** That makes it the only Omniverse library
+tested here with no CPU fallback — `ovphysx` degrades to `ePABP` broadphase, `warp` runs
+its CPU backend, but `ovstream` needs NVENC and stops at `initialize()`.
+
+Its place in the stack is a trio: `ovrtx` renders → `ovstream` transports → `ovui` puts an
+interface on it. That is the subject of `omniverse-realtime-viewer` (54 nested references).
+Irrelevant to asset preparation; relevant the moment you want a browser-served viewer.
 
 ### One missing system library
 

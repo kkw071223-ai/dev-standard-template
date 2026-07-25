@@ -141,7 +141,7 @@ Install status verified by `pip install` in a clean venv:
 | `ovstage` | ✅ | 0.1.0.346039 | High-performance scene data layer |
 | `ovphysx` | ✅ | 0.5.9 | USD-native PhysX; ships 6 agent skills |
 | `ovrtx` | ✅ | 0.4.0.346409 | RTX rendering + sensor simulation (needs GPU) |
-| `ovstream` | ✅ | 0.4.5 | GPU data sharing / streaming transport |
+| `ovstream` | ✅ | 0.4.5 | GStreamer pixel streaming + remote input (**GPU-only**) |
 | `ovstorage` | ✅ | 0.1.0 | Cloud-native asset APIs |
 | `newton` | ✅ | 1.4.0 | Physics engine on Warp |
 | `warp-lang` | ✅ | 1.15.0 | GPU kernel framework (**CPU fallback works**) |

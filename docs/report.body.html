@@ -1,0 +1,1150 @@
+<title>Omniverse 에이전트 생태계 — 직접 돌려본 검증 보고서</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* ─────────────────────────────────────────────── tokens */
+  :root {
+    color-scheme: light dark;
+
+    --paper:      #f4f6f8;
+    --card:       #ffffff;
+    --ink:        #151a22;
+    --ink-soft:   #39424f;
+    --muted:      #6a7382;
+    --rule:       #d9dee5;
+    --rule-soft:  #e8ecf1;
+
+    --accent:     #0f6e7a;
+    --accent-ink: #0a4f58;
+    --accent-wash:#e4f0f2;
+
+    --pass:       #1f7a4d;
+    --pass-wash:  #e6f2ec;
+    --fail:       #b3283c;
+    --fail-wash:  #fbe9ec;
+    --warn:       #a8551a;
+    --warn-wash:  #fbeee2;
+
+    --term-bg:    #161c26;
+    --term-ink:   #d7dee8;
+    --term-dim:   #7f8b9c;
+    --term-green: #6fce9a;
+    --term-red:   #f08199;
+    --term-amber: #e6bd72;
+    --term-cyan:  #74c6d4;
+
+    --display: ui-sans-serif, system-ui, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --body: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+    --measure: 68ch;
+    --wide: 1080px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #10151c; --card: #171d26; --ink: #e6eaf0; --ink-soft: #bcc5d1;
+      --muted: #8b95a4; --rule: #2b333f; --rule-soft: #222a35;
+      --accent: #58bccb; --accent-ink: #8fd6e2; --accent-wash: #16303a;
+      --pass: #61c996; --pass-wash: #16302a; --fail: #f0899f; --fail-wash: #33202a;
+      --warn: #e0a86e; --warn-wash: #322619;
+      --term-bg: #0c1118; --term-ink: #d7dee8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #10151c; --card: #171d26; --ink: #e6eaf0; --ink-soft: #bcc5d1;
+    --muted: #8b95a4; --rule: #2b333f; --rule-soft: #222a35;
+    --accent: #58bccb; --accent-ink: #8fd6e2; --accent-wash: #16303a;
+    --pass: #61c996; --pass-wash: #16302a; --fail: #f0899f; --fail-wash: #33202a;
+    --warn: #e0a86e; --warn-wash: #322619;
+    --term-bg: #0c1118; --term-ink: #d7dee8;
+  }
+  :root[data-theme="light"] {
+    --paper: #f4f6f8; --card: #ffffff; --ink: #151a22; --ink-soft: #39424f;
+    --muted: #6a7382; --rule: #d9dee5; --rule-soft: #e8ecf1;
+    --accent: #0f6e7a; --accent-ink: #0a4f58; --accent-wash: #e4f0f2;
+    --pass: #1f7a4d; --pass-wash: #e6f2ec; --fail: #b3283c; --fail-wash: #fbe9ec;
+    --warn: #a8551a; --warn-wash: #fbeee2;
+    --term-bg: #161c26; --term-ink: #d7dee8;
+  }
+
+  /* ─────────────────────────────────────────────── base */
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--body); font-size: 17px; line-height: 1.68;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: var(--wide); margin: 0 auto; padding: 0 clamp(18px, 4vw, 40px); }
+  .col { max-width: var(--measure); }
+
+  h1, h2, h3, h4, .eyebrow, .lede { font-family: var(--display); }
+  h1 { font-size: clamp(2rem, 5.2vw, 3.15rem); line-height: 1.06; letter-spacing: -0.024em;
+       font-weight: 800; margin: 0; text-wrap: balance; }
+  h2 { font-size: clamp(1.4rem, 3vw, 1.85rem); line-height: 1.18; letter-spacing: -0.018em;
+       font-weight: 750; margin: 0 0 .3em; text-wrap: balance; }
+  h3 { font-size: 1.14rem; line-height: 1.3; letter-spacing: -0.008em; font-weight: 700;
+       margin: 2.2em 0 .45em; text-wrap: balance; }
+  h4 { font-size: .97rem; letter-spacing: -0.004em; font-weight: 700; margin: 1.6em 0 .35em; }
+  p { margin: 0 0 1.05em; }
+  a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  strong { font-weight: 700; color: var(--ink); }
+  code { font-family: var(--mono); font-size: .855em; background: var(--rule-soft);
+         padding: .1em .34em; border-radius: 3px; }
+  .eyebrow { font-size: .705rem; text-transform: uppercase; letter-spacing: .14em;
+             font-weight: 700; color: var(--accent-ink); }
+
+  /* ─────────────────────────────────────────────── header */
+  header.top { border-bottom: 1px solid var(--rule); background: var(--card); }
+  .top-in { padding: clamp(38px, 7vw, 76px) 0 clamp(26px, 4vw, 40px); }
+  .slug { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline;
+          font-family: var(--display); font-size: .74rem; letter-spacing: .1em;
+          text-transform: uppercase; color: var(--muted); margin-bottom: 1.6em; }
+  .slug b { color: var(--accent-ink); letter-spacing: .1em; }
+  .lede { font-size: clamp(1.02rem, 2.1vw, 1.22rem); line-height: 1.5; color: var(--ink-soft);
+          font-weight: 400; margin: 1.1em 0 0; max-width: 60ch; }
+  .env { display: flex; flex-wrap: wrap; gap: 0 26px; margin-top: 2.1em;
+         font-family: var(--mono); font-size: .765rem; color: var(--muted); }
+  .env span b { color: var(--ink-soft); font-weight: 600; }
+
+  /* ─────────────────────────────────────────────── sections */
+  section { padding: clamp(42px, 6.5vw, 78px) 0; border-bottom: 1px solid var(--rule); }
+  section:last-of-type { border-bottom: 0; }
+  .s-head { display: flex; gap: 16px; align-items: baseline; margin-bottom: 1.5em; }
+  .s-head .n { font-family: var(--mono); font-size: .8rem; font-weight: 600;
+               color: var(--accent); padding-top: .45em; flex: none; }
+
+  /* ─────────────────────────────────────────────── cards & callouts */
+  .card { background: var(--card); border: 1px solid var(--rule); border-radius: 6px;
+          padding: clamp(16px, 2.6vw, 26px); }
+  .note { border-left: 3px solid var(--accent); background: var(--accent-wash);
+          padding: 14px 18px; border-radius: 0 4px 4px 0; margin: 1.5em 0; }
+  .note.warn { border-left-color: var(--warn); background: var(--warn-wash); }
+  .note.fail { border-left-color: var(--fail); background: var(--fail-wash); }
+  .note.pass { border-left-color: var(--pass); background: var(--pass-wash); }
+  .note > :last-child { margin-bottom: 0; }
+  .note .lbl { font-family: var(--display); font-size: .7rem; text-transform: uppercase;
+               letter-spacing: .12em; font-weight: 700; display: block; margin-bottom: .5em; }
+  .note .lbl { color: var(--accent-ink); }
+  .note.warn .lbl { color: var(--warn); }
+  .note.fail .lbl { color: var(--fail); }
+  .note.pass .lbl { color: var(--pass); }
+
+  /* ─────────────────────────────────────────────── terminal */
+  .term { background: var(--term-bg); border-radius: 7px; overflow: hidden; margin: 1.6em 0;
+          border: 1px solid rgba(255,255,255,.07); }
+  .term-bar { display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+              background: rgba(255,255,255,.045); border-bottom: 1px solid rgba(255,255,255,.07);
+              font-family: var(--mono); font-size: .705rem; color: var(--term-dim);
+              letter-spacing: .03em; }
+  .term-bar .dot { width: 8px; height: 8px; border-radius: 50%; background: #4a5666; flex: none; }
+  .term pre { margin: 0; padding: 14px 16px 16px; overflow-x: auto;
+              font-family: var(--mono); font-size: .795rem; line-height: 1.62;
+              color: var(--term-ink); }
+  .term .c { color: var(--term-cyan); }        /* command */
+  .term .g { color: var(--term-green); }
+  .term .r { color: var(--term-red); }
+  .term .a { color: var(--term-amber); }
+  .term .d { color: var(--term-dim); }
+
+  /* ─────────────────────────────────────────────── figures */
+  figure { margin: 2em 0; }
+  figure img { width: 100%; height: auto; display: block; border: 1px solid var(--rule);
+               border-radius: 6px; background: #fff; }
+  figcaption { font-family: var(--display); font-size: .805rem; line-height: 1.5;
+               color: var(--muted); margin-top: .8em; }
+  figcaption b { color: var(--ink-soft); font-weight: 650; }
+
+  /* ─────────────────────────────────────────────── tables */
+  .tw { overflow-x: auto; margin: 1.6em 0; border: 1px solid var(--rule); border-radius: 6px;
+        background: var(--card); }
+  table { border-collapse: collapse; width: 100%; font-family: var(--display);
+          font-size: .845rem; }
+  th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--rule-soft);
+           vertical-align: top; }
+  th { font-size: .705rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 700;
+       color: var(--muted); background: var(--rule-soft); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right;
+           white-space: nowrap; }
+  td code, th code { background: none; padding: 0; font-size: .93em; }
+
+  .chip { font-family: var(--mono); font-size: .715rem; font-weight: 600; padding: .16em .5em;
+          border-radius: 3px; white-space: nowrap; display: inline-block; }
+  .chip.ok { color: var(--pass); background: var(--pass-wash); }
+  .chip.no { color: var(--fail); background: var(--fail-wash); }
+  .chip.mid { color: var(--warn); background: var(--warn-wash); }
+
+  /* ─────────────────────────────────────────────── pipeline rail */
+  ol.rail { list-style: none; margin: 2em 0 0; padding: 0; }
+  ol.rail > li { display: grid; grid-template-columns: 34px 1fr; gap: 0 18px;
+                 padding-bottom: 30px; position: relative; }
+  ol.rail > li::before { content: ""; position: absolute; left: 16px; top: 32px; bottom: 0;
+                         width: 1px; background: var(--rule); }
+  ol.rail > li:last-child { padding-bottom: 0; }
+  ol.rail > li:last-child::before { display: none; }
+  .step-n { width: 33px; height: 33px; border-radius: 50%; display: grid; place-items: center;
+            font-family: var(--mono); font-size: .8rem; font-weight: 700; color: var(--card);
+            background: var(--accent); flex: none; position: relative; z-index: 1; }
+  .step-b h4 { margin-top: .3em; }
+  .step-b > :last-child { margin-bottom: 0; }
+
+  /* ─────────────────────────────────────────────── misc lists */
+  ul.plain { list-style: none; padding: 0; margin: 1.2em 0; display: grid; gap: .7em; }
+  ul.plain > li { display: grid; grid-template-columns: auto 1fr; gap: 12px;
+                  font-family: var(--display); font-size: .9rem; line-height: 1.5; }
+  dl.kv { margin: 1.4em 0; display: grid; gap: 0; }
+  dl.kv > div { display: grid; grid-template-columns: minmax(120px, 190px) 1fr; gap: 6px 20px;
+                padding: 11px 0; border-bottom: 1px solid var(--rule-soft);
+                font-family: var(--display); font-size: .875rem; }
+  dl.kv dt { font-family: var(--mono); font-size: .8rem; color: var(--accent-ink);
+             font-weight: 600; }
+  dl.kv dd { margin: 0; color: var(--ink-soft); }
+
+  .grid2 { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); }
+  .stat { font-family: var(--display); }
+  .stat .v { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1;
+             font-variant-numeric: tabular-nums; color: var(--accent-ink); }
+  .stat .k { font-size: .78rem; color: var(--muted); margin-top: .45em; line-height: 1.4; }
+
+  footer { padding: 40px 0 64px; font-family: var(--display); font-size: .8rem;
+           color: var(--muted); }
+  footer a { color: var(--accent-ink); }
+  footer ul { padding-left: 1.1em; margin: .7em 0 0; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    a, .step-n { transition: color .15s ease, background-color .15s ease; }
+  }
+</style>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div class="slug">
+      <b>검증 보고서</b><span>NVIDIA Omniverse</span><span>2026-07-25</span>
+    </div>
+    <div class="col">
+      <h1>에이전트로 3D 시뮬레이션 자산을 자동으로 만들 수 있는가</h1>
+      <p class="lede">
+        NVIDIA가 공개한 Omniverse 에이전트·스킬 생태계를 전부 찾아내고, 샌드박스에서
+        직접 실행해 입력과 출력을 기록했습니다. 문서를 읽고 정리한 게 아니라,
+        실패한 명령까지 그대로 남긴 실행 기록입니다.
+      </p>
+    </div>
+    <div class="env">
+      <span><b>환경</b> Linux x86_64 · Python 3.11.15</span>
+      <span><b>GPU</b> 없음</span>
+      <span><b>메모리</b> 15 GB</span>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════ 0. 결론 -->
+<section>
+  <div class="wrap">
+    <div class="s-head"><span class="n">요약</span><h2>결론부터</h2></div>
+    <div class="col">
+      <p>
+        <strong>네, 됩니다.</strong> 그리고 그게 가능한 이유는 모델이 똑똑해서가 아니라,
+        Omniverse가 <strong>“완료”를 기계가 판정할 수 있게 정의</strong>해두었기 때문입니다.
+        검증기가 “이 자산은 <code>RB.006</code>을 위반했다”고 코드로 알려주니,
+        에이전트는 추측이 아니라 그 코드를 고치고 다시 검사해서 확인할 수 있습니다.
+      </p>
+    </div>
+
+    <div class="grid2" style="margin-top:2em">
+      <div class="card stat"><div class="v">147</div>
+        <div class="k">Omniverse 관련 스킬 유닛<br>(직접 저장소를 클론해서 센 수)</div></div>
+      <div class="card stat"><div class="v">6 → 0</div>
+        <div class="k">로봇 자산의 SimReady 위반 개수<br>자동 수정 전 → 후</div></div>
+      <div class="card stat"><div class="v">11 / 13</div>
+        <div class="k">GPU 없이 설치·실행된<br>Omniverse 라이브러리</div></div>
+    </div>
+
+    <div class="col">
+      <div class="note pass">
+        <span class="lbl">한 문장으로</span>
+        NVIDIA 컨버터로 로봇을 USD로 바꾸면 USD 검증은 통과하지만 SimReady 규격은
+        <strong>6개 항목에서 실패</strong>합니다. 그 6개를 닫는 것이 바로 에이전트가 맡을 일이고,
+        이 보고서는 그걸 끝까지 자동화해서 <strong>통과</strong>시킨 기록입니다.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ 1. 기초 개념 -->
+<section>
+  <div class="wrap">
+    <div class="s-head"><span class="n">01</span><h2>먼저, 용어 네 개만</h2></div>
+    <div class="col">
+      <p>
+        이 분야는 약어가 많아서 처음엔 벽처럼 느껴집니다. 하지만 실제로 필요한 개념은
+        네 개뿐입니다.
+      </p>
+
+      <dl class="kv">
+        <div>
+          <dt>USD</dt>
+          <dd><b>3D 씬의 파일 형식.</b> 3D 업계의 PDF 같은 존재입니다. 원래 픽사가 만들었고,
+              Omniverse 전체가 이걸 공통 언어로 씁니다. 텍스트(<code>.usda</code>)로 열어
+              읽을 수 있습니다.</dd>
+        </div>
+        <div>
+          <dt>SimReady</dt>
+          <dd><b>“시뮬레이션에 쓸 수 있는 상태”의 규격.</b> 3D 모델이 예쁘게 보이는 것과,
+              물리 엔진에서 제대로 굴러가는 것은 전혀 다른 문제입니다. 마찰 계수가 없거나
+              충돌 형상이 없으면 보기엔 멀쩡해도 시뮬레이션은 엉망이 됩니다.
+              SimReady는 그 조건들을 <b>코드로 번호 붙여</b> 정의한 표준입니다.</dd>
+        </div>
+        <div>
+          <dt>Skill (스킬)</dt>
+          <dd><b>에이전트에게 주는 작업 설명서.</b> <code>SKILL.md</code> 파일 하나와 실행
+              스크립트들이 담긴 폴더입니다. Claude Code·Cursor 같은 도구에 설치하면
+              에이전트가 그 절차를 따라 일합니다.</dd>
+        </div>
+        <div>
+          <dt>MCP 서버</dt>
+          <dd><b>에이전트가 질문할 수 있는 지식 창구.</b> “이 API 어떻게 쓰지?”에 답해줍니다.
+              중요한 점: <b>실행은 하지 않습니다.</b> 아는 것과 하는 것이 분리돼 있습니다.</dd>
+        </div>
+      </dl>
+
+      <div class="note">
+        <span class="lbl">비유</span>
+        USD는 <b>도면</b>, SimReady는 <b>납품 검사 기준</b>, 스킬은 <b>작업 지시서</b>,
+        MCP는 <b>기술 문의 창구</b>입니다. 이 보고서의 핵심은 “납품 검사에서 떨어진 도면을
+        에이전트가 스스로 고쳐서 통과시킬 수 있는가”입니다.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ 2. ovstream -->
+<section>
+  <div class="wrap">
+    <div class="s-head"><span class="n">02</span><h2>ovstream은 영역이 다릅니다</h2></div>
+    <div class="col">
+      <p>
+        질문 주신 부분입니다. 처음 조사에서 <code>ovstream</code>은 설치·임포트만 확인하고
+        깊이 파지 않았습니다. 이번에 API를 열어보니 <strong>확실히 다른 영역</strong>이었습니다.
+      </p>
+      <p>
+        NVIDIA 개발자 페이지 요약에는 “GPU 데이터 공유”라고 적혀 있어서 저장·전송 계층인가
+        했는데, 실제 패키지 내용은 <strong>GStreamer 기반 영상 스트리밍 + 원격 입력</strong>
+        라이브러리였습니다. 즉 <b>렌더링 결과 화면을 사용자에게 보내고, 마우스·키보드를 되받는</b>
+        계층입니다.
+      </p>
+    </div>
+
+    <div class="term">
+      <div class="term-bar"><span class="dot"></span>ovstream 실제 API — 직접 확인</div>
+<pre><span class="d">$</span> <span class="c">python -c "import ovstream; print(ovstream.__doc__)"</span>
+OVSTREAM SDK Python bindings.
+    ovstream.initialize()
+    with ovstream.Server(ovstream.ServerType.RTSP) as server:
+        server.start(ovstream.ServerConfig(width=1920, height=1080))
+
+<span class="d">전송 방식 5종</span>   ServerType: WEBRTC, NATIVE, RTSP, SHM, CUDASHM
+<span class="d">입력 이벤트 4종</span> InputEventType: KEYBOARD, MOUSE, GAMEPAD, TOUCH
+<span class="d">프레임 타입</span>     VideoFrame, AudioFrame, CudaSync
+
+<span class="d">$</span> <span class="c">python -c "import ovstream; ovstream.initialize()"</span>
+<span class="r">OSError: libcuda.so.1: cannot open shared object file</span></pre>
+    </div>
+
+    <div class="col">
+      <div class="note warn">
+        <span class="lbl">중요한 차이</span>
+        <code>ovphysx</code>(물리)는 GPU가 없으면 <b>CPU로 알아서 내려앉습니다</b>.
+        그런데 <code>ovstream</code>은 <b>초기화 자체가 실패</b>합니다. NVENC 하드웨어 인코더에
+        의존하기 때문입니다. 제가 테스트한 Omniverse 라이브러리 중 CPU 폴백이 없는
+        유일한 경우였습니다.
+      </div>
+
+      <h3>그래서 어디에 쓰나</h3>
+      <p>
+        <code>ovstream</code>은 혼자 쓰는 게 아니라 세 개가 한 조입니다.
+        <code>ovrtx</code>가 화면을 <b>그리고</b> → <code>ovstream</code>이 그걸
+        <b>내보내고</b> → <code>ovui</code>가 <b>UI를 얹습니다</b>.
+        “브라우저에서 Omniverse 씬을 돌려보게 하고 싶다”가 목표일 때 쓰는 조합입니다.
+        <code>omniverse-realtime-viewer</code> 스킬(하위 레퍼런스 54개)이 정확히 이 작업을 위한 것입니다.
+      </p>
+      <p>
+        <strong>지금 사용자님 목적(자산 준비 자동화)에는 필요하지 않습니다.</strong>
+        뷰어를 직접 만들 단계가 되면 그때 꺼내면 됩니다.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ 3. 생태계 지도 -->
+<section>
+  <div class="wrap">
+    <div class="s-head"><span class="n">03</span><h2>생태계 규모 — 40~50개가 아니라 147개</h2></div>
+    <div class="col">
+      <p>
+        “40~50개 이상”으로 추정하셨는데, Omniverse 관련만 세어도 그보다 많습니다.
+        마케팅 페이지를 읽은 게 아니라 저장소를 클론해서 디렉터리를 센 숫자입니다.
+      </p>
+      <p>
+        구조를 알면 숫자가 이해됩니다. 최상위 스킬은 대부분 <strong>라우터</strong>라서,
+        그 안에 실제 작업 단위가 중첩돼 있습니다. 예를 들어
+        <code>omniverse-cad-to-simready</code> 하나가 15개 하위 레퍼런스와
+        23개 실행 스크립트를 품고 있습니다.
+      </p>
+    </div>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>계층</th><th>개수</th><th>내용</th></tr></thead>
+        <tbody>
+          <tr><td>Omniverse 라우터 스킬</td><td class="num">3</td>
+              <td>cad-to-simready · usd-performance-tuning · realtime-viewer</td></tr>
+          <tr><td>└ 중첩 하위 레퍼런스</td><td class="num">81</td>
+              <td>15 + 12 + 54 — 실제 작업 단위</td></tr>
+          <tr><td>Physical AI 스킬</td><td class="num">5</td>
+              <td>NuRec 재구성 · 결함 이미지 생성 · 영상 증강 · 인물 속성 · 인프라</td></tr>
+          <tr><td>└ NuRec 상위 저장소</td><td class="num">6</td>
+              <td>ncore · nre · asset-harvester · nurec-fixer 등</td></tr>
+          <tr><td>SimReady Foundation 스킬</td><td class="num">25</td>
+              <td>규격 적합화 11 + 규격 자체를 확장하는 14</td></tr>
+          <tr><td><code>i4h-*</code> (Isaac for Healthcare)</td><td class="num">18</td>
+              <td>공개된 Sim2Real 폐루프의 가장 완성된 예시</td></tr>
+          <tr><td><code>amc-*</code> (카메라 캘리브레이션)</td><td class="num">3</td>
+              <td>Real2Sim 진입점 — 영상에서 카메라 위치 추정</td></tr>
+          <tr><td><code>ovphysx</code> 휠에 내장</td><td class="num">6</td>
+              <td><code>pip install</code>만으로 따라옴 (아래 참고)</td></tr>
+          <tr><td><strong>합계</strong></td><td class="num"><strong>147</strong></td>
+              <td>+ MCP 도구 34종, 라이브러리 13종</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col">
+      <div class="note">
+        <span class="lbl">흥미로운 발견</span>
+        <code>pip install ovphysx</code> 하면 물리 라이브러리만 오는 게 아니라
+        <b>에이전트 스킬 6개 + 문서 136개 + 예제 7개</b>가 <code>site-packages</code> 안에
+        같이 들어옵니다. <code>ovphysx.ai_skills_path()</code>로 경로를 얻습니다.
+        문서가 설치된 버전과 절대 어긋나지 않는 배포 방식인데, 따라 할 만한 패턴입니다.
+      </div>
+
+      <h3>MCP 서버 4개</h3>
+      <p>
+        말씀하신 4개가 맞습니다. 다만 <strong>전부 “질문에 답하는” 서버이고, 실행은 하지
+        않습니다.</strong> 이 구분이 중요합니다 — 아는 것은 MCP, 하는 것은 스킬과 라이브러리입니다.
+      </p>
+    </div>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>서버</th><th>포트</th><th>도구</th><th>담당</th></tr></thead>
+        <tbody>
+          <tr><td><code>usd-code-mcp</code></td><td class="num">9903</td><td class="num">7</td>
+              <td>OpenUSD API 전체 + 코드 예제</td></tr>
+          <tr><td><code>kit-mcp</code></td><td class="num">9902</td><td class="num">12</td>
+              <td>Kit 익스텐션 400+, 설정 1000+</td></tr>
+          <tr><td><code>omni-ui-mcp</code></td><td class="num">9901</td><td class="num">10</td>
+              <td><code>omni.ui</code> 위젯·스타일</td></tr>
+          <tr><td><code>isaacsim-mcp</code></td><td class="num">9904</td><td class="num">5</td>
+              <td>Isaac Sim 익스텐션·설정</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col">
+      <p style="color:var(--muted);font-family:var(--display);font-size:.87rem">
+        이 4개는 <b>실행하지 못했습니다</b> — <code>NVIDIA_API_KEY</code>가 필요합니다.
+        도구 목록은 저장소의 README에서 확인한 것이고, 런타임 동작은 검증하지 않았습니다.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ 4. 실제 실행 -->
+<section>
+  <div class="wrap">
+    <div class="s-head"><span class="n">04</span><h2>직접 돌린 것 — 로봇 하나를 끝까지</h2></div>
+    <div class="col">
+      <p>
+        여기가 본론입니다. 관절 2개짜리 로봇 팔 URDF 파일 하나(1.6 KB)를 만들어서,
+        NVIDIA 실제 도구 체인에 통과시켰습니다. 각 단계에서 무엇이 들어가고 무엇이 나왔는지
+        그림과 터미널 출력으로 남겼습니다.
+      </p>
+    </div>
+
+    <ol class="rail">
+      <!-- step 1 -->
+      <li>
+        <span class="step-n">1</span>
+        <div class="step-b">
+          <h4>URDF → USD 변환</h4>
+          <div class="col">
+            <p>
+              URDF는 로봇 기술 표준 포맷입니다. 이걸 USD로 바꿉니다.
+              1.6 KB 텍스트가 <strong>6개 레이어로 이루어진 USD 자산</strong>이 됩니다.
+            </p>
+          </div>
+          <div class="term">
+            <div class="term-bar"><span class="dot"></span>urdf_usd_converter</div>
+<pre><span class="d">$</span> <span class="c">urdf_usd_converter arm2.urdf out/arm2</span>
+<span class="d"># 2초 미만, 종료코드 0</span>
+
+out/arm2/arm2.usda                    <span class="d">← 인터페이스 레이어</span>
+out/arm2/Payload/Contents.usda
+out/arm2/Payload/Geometry.usda
+out/arm2/Payload/Materials.usda
+out/arm2/Payload/MaterialsLibrary.usdc
+out/arm2/Payload/Physics.usda         <span class="d">← 총 40 KB</span></pre>
+          </div>
+          <div class="col">
+            <p>
+              변환기가 알아서 결정한 것들이 있습니다. 관절 한계값이
+              <strong>라디안에서 도(degree)로 바뀌고</strong>(<code>1.57</code> → <code>89.95</code>),
+              Newton 물리 엔진 스키마가 자동으로 붙고, URDF의 <code>effort</code> 값은
+              USD에 의미가 없지만 <code>custom float urdf:limit:effort</code>로 보존됩니다.
+              요청하지 않은 고정 관절도 하나 생깁니다.
+            </p>
+          </div>
+        </div>
+      </li>
+
+      <!-- step 2 -->
+      <li>
+        <span class="step-n">2</span>
+        <div class="step-b">
+          <h4>변환 결과를 눈으로 확인</h4>
+          <div class="col">
+            <p>
+              USD 파일 안의 좌표를 읽어서 그림으로 그렸습니다. 여기서 중요한 걸 알 수 있습니다 —
+              변환기는 각 링크마다 <strong>보이는 형상</strong>과
+              <strong>부딪히는 형상</strong>을 따로 만들고, <code>purpose</code> 속성으로 구분합니다.
+            </p>
+          </div>
+          <figure>
+            <img src="{{FIG:robot-arm2}}" alt="arm2 로봇의 시각 형상, 충돌 형상, 겹쳐 본 모습 3분할 3D 플롯">
+            <figcaption>
+              <b>URDF에서 변환된 로봇 arm2.</b> 왼쪽은 보이는 형상(파랑, 3개),
+              가운데는 물리 충돌 형상(빨강 점선, 4개), 오른쪽은 겹쳐 본 것.
+              박스 받침 + 원기둥 링크 + 구형 그리퍼 구조가 그대로 보입니다.
+              보라색 선은 4단계에서 에이전트가 추가한 파지 벡터입니다.
+              USD의 해석적 프림(Cube·Cylinder·Sphere)을 직접 삼각분할해서 그린 것으로,
+              뷰포트 스크린샷이 아닙니다 — 뷰포트 렌더링은 GPU가 필요합니다.
+            </figcaption>
+          </figure>
+          <div class="col">
+            <div class="note">
+              <span class="lbl">알아두면 좋은 것</span>
+              충돌 형상이 <code>purpose = guide</code>로 표시된 덕분에,
+              나중에 “모든 렌더링 대상에 재질이 있어야 한다”는 규칙(<code>VM.MAT.001</code>)에서
+              <b>자동으로 면제</b>됩니다. 규격들이 서로 맞물려 설계돼 있습니다.
+            </div>
+          </div>
+        </div>
+      </li>
+
+      <!-- step 3 -->
+      <li>
+        <span class="step-n">3</span>
+        <div class="step-b">
+          <h4>USD 검증 — 통과. 그런데 SimReady 검증 — 실패</h4>
+          <div class="col">
+            <p>
+              먼저 일반 USD 검증기를 돌리면 <strong>깨끗하게 통과</strong>합니다.
+              그런데 SimReady 규격으로 검사하면 <strong>6개 항목에서 실패</strong>합니다.
+              이 간극이 이 보고서의 핵심입니다.
+            </p>
+          </div>
+          <div class="term">
+            <div class="term-bar"><span class="dot"></span>두 검증기의 상반된 판정</div>
+<pre><span class="d">$</span> <span class="c">nvidia_usd_validate out/arm2/arm2.usda</span>
+<span class="g">No issues found.</span>   <span class="d">종료코드 0</span>
+
+<span class="d">$</span> <span class="c">simready-validate out/arm2/arm2.usda --profile Prop-Robotics-Neutral</span>
+<span class="r">FAIL</span> <span class="a">NP.005</span>  다른 USD 파일이 폴더에 있으면 안 됨: Geometry.usda, Physics.usda, ...
+<span class="r">FAIL</span> <span class="a">RB.006</span>  강체가 강체의 자식인데 xformstack reset이 없음  <span class="d">(×2)</span>
+<span class="r">FAIL</span> <span class="a">GSP.001</span> 파지 벡터 프림이 최소 1개 있어야 함
+<span class="r">FAIL</span> <span class="a">NP.006</span> SimReady 메타데이터가 없음
+<span class="r">FAIL</span> <span class="a">PMT.001</span> 충돌 형상에 물리 재질이 연결되지 않음
+
+  <span class="r">[FAILED]</span> Prop-Robotics-Neutral v1.0.0   <span class="d">2/6 통과</span></pre>
+          </div>
+          <div class="col">
+            <p>
+              각 실패에 <strong>번호</strong>가 붙어 있는 것이 결정적입니다.
+              “뭔가 이상하다”가 아니라 “<code>RB.006</code> 위반, 위치는 이 프림”이라고
+              나오기 때문에, 에이전트가 정확히 무엇을 고칠지 알 수 있습니다.
+            </p>
+            <div class="note fail">
+              <span class="lbl">NVIDIA 도구끼리 충돌</span>
+              <code>NP.005</code>는 “자산 폴더에 USD 파일은 하나만”을 요구합니다.
+              그런데 방금 <b>NVIDIA 자체 변환기</b>가 만든 것은 6개 레이어짜리 구조입니다.
+              즉 <b>NVIDIA의 규칙이 NVIDIA의 변환기 출력을 거부</b>합니다.
+              둘 다 각자 옳지만 전제가 다르고, 누군가는 조정해야 합니다.
+              그 자리가 에이전트 자리입니다.
+            </div>
+          </div>
+          <figure>
+            <img src="{{FIG:layers-np005}}" alt="변환 직후 6개 레이어 구조와 평탄화 후 단일 레이어 구조 비교">
+            <figcaption>
+              <b>NP.005 충돌을 그림으로.</b> 왼쪽은 변환기가 만든 다층 구조(효율적이지만 규칙 위반),
+              오른쪽은 평탄화하고 나머지 5개 항목까지 채운 결과.
+            </figcaption>
+          </figure>
+        </div>
+      </li>
+
+      <!-- step 4 -->
+      <li>
+        <span class="step-n">4</span>
+        <div class="step-b">
+          <h4>자동 수정 → 6/6 통과</h4>
+          <div class="col">
+            <p>
+              6개 항목을 닫는 스크립트를 작성했습니다. 각 검사기의 소스 코드를 읽고
+              정확히 무엇을 요구하는지 확인한 뒤 구현했습니다 —
+              <strong>SimReady 규격이 실행 가능한 파이썬이라서</strong> 추측할 필요가 없습니다.
+            </p>
+          </div>
+          <figure>
+            <img src="{{FIG:conformance-arm2}}" alt="6개 SimReady feature의 수정 전후 통과 여부 막대 그래프">
+            <figcaption>
+              <b>수정 전(위) / 후(아래).</b> 검증기가 직접 출력한 JSON을 그린 것입니다.
+              <code>FET</code>는 기능 묶음(feature)으로, 각각이 여러 요구사항 코드로 구성됩니다.
+              2/6에서 6/6이 되었습니다.
+            </figcaption>
+          </figure>
+          <div class="col">
+            <div class="note warn">
+              <span class="lbl">첫 시도는 실패했습니다</span>
+              <code>RB.006</code>이 계속 남았습니다. 제 코드가 조상 중에 이미 수정된 것이 있으면
+              멈추도록 되어 있었는데, 검사기 소스를 읽어보니
+              <b>각 프림이 자기 자신에</b> 표시를 가져야 했습니다. 조상의 표시는 자손을 덮지 않습니다.
+              한 줄 고치고 통과했습니다.
+              <br><br>
+              이건 단순한 형식 규칙이 아닙니다. URDF의 관절 트리가 USD에서 <b>중첩된 강체</b>가
+              되는데, 중첩 강체에 변환 스택 초기화가 없으면 <b>시뮬레이션 결과가 정의되지 않습니다</b>.
+              순진한 변환이 만드는 실제 물리 버그입니다.
+            </div>
+          </div>
+        </div>
+      </li>
+
+      <!-- step 5 -->
+      <li>
+        <span class="step-n">5</span>
+        <div class="step-b">
+          <h4>검사만 통과하고 물리가 깨졌으면 무의미하다</h4>
+          <div class="col">
+            <p>
+              규격을 맞추려고 자산을 수정했으니, <strong>움직임이 망가지지 않았는지</strong>
+              반드시 확인해야 합니다. 실제로 물리 시뮬레이션을 돌리고 관절 각도를 초당 60회
+              기록했습니다.
+            </p>
+          </div>
+          <figure>
+            <img src="{{FIG:trajectory-arm2}}" alt="두 관절의 각도와 속도 시간 그래프, URDF 한계선에서 정확히 멈춤">
+            <figcaption>
+              <b>실제로 기록한 관절 움직임.</b> 초기 속도 2 rad/s를 준 뒤 400스텝.
+              위는 관절 각도, 아래는 속도. 점선은 원본 URDF에 적힌 한계값입니다.
+              두 관절이 <b>정확히 그 선에서 멈춥니다</b> — 1.57과 2.0.
+            </figcaption>
+          </figure>
+          <div class="col">
+            <div class="note pass">
+              <span class="lbl">이 그래프가 증명하는 것</span>
+              원본 URDF에 <code>upper="1.57"</code>, <code>upper="2.0"</code>이라고 쓴 값이,
+              USD로 변환되고(내부적으로는 도 단위로 바뀌고) PhysX 엔진에 올라가서까지
+              <b>정확히 지켜졌습니다</b>. URDF → USD → 물리 엔진 전체 체인이 온전하다는
+              눈에 보이는 증거입니다.
+              <br><br>
+              어깨 관절(파랑)은 중력을 받아 7 rad/s까지 가속했다가 한계에서 멈추고,
+              손목 관절(빨강)은 중력 토크가 없어서 준 속도 그대로 갔다가 멈춥니다.
+              물리적으로 맞는 거동입니다.
+            </div>
+          </div>
+        </div>
+      </li>
+
+      <!-- step 6 -->
+      <li>
+        <span class="step-n">6</span>
+        <div class="step-b">
+          <h4>다른 포맷으로도 되나 — MuJoCo에서 새 문제 발견</h4>
+          <div class="col">
+            <p>
+              같은 파이프라인을 MuJoCo 형식(카트폴)에 돌렸습니다.
+              그러자 URDF에는 없던 <strong>새 실패 항목</strong>이 나왔습니다.
+            </p>
+          </div>
+          <figure>
+            <img src="{{FIG:robot-cartpole}}" alt="MuJoCo 카트폴의 시각 형상, 충돌 형상, 겹쳐 본 모습">
+            <figcaption>
+              <b>MuJoCo XML에서 변환된 카트폴.</b> 카트(박스)를 막대(캡슐)가 관통하는 구조.
+              가운데 칸이 거의 빈 것에 주목하세요 — arm2와 달리
+              <b>충돌 전용 형상이 없습니다</b>. 바닥 평면은 5 m로 너무 커서 화면 밖으로 나갑니다.
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="{{FIG:conformance-cartpole}}" alt="MuJoCo 카트폴의 수정 전후 통과 여부">
+            <figcaption>
+              <b>수정 전후 판정.</b> <code>VM.MAT.001</code>이 처음 등장합니다 —
+              MuJoCo 변환기는 시각 재질을 만들지 않는데, URDF 변환기는
+              <code>&lt;material&gt;</code> 태그에서 만들어주기 때문입니다.
+            </figcaption>
+          </figure>
+          <div class="col">
+            <p>
+              대응은 3단계와 같았습니다. 검사기 소스를 읽고
+              (“<code>purpose</code>가 <code>default</code>거나 <code>render</code>인 모든 형상에
+              재질이 연결돼야 함”), 40줄쯤 추가하니 양쪽 다 6/6이 됐습니다.
+            </p>
+            <p>
+              그런데 <strong>왜</strong> 한쪽만 실패했는지가 더 흥미롭습니다.
+              두 자산의 프림을 비교해보니 구조가 근본적으로 달랐습니다.
+            </p>
+            <div class="tw">
+              <table>
+                <thead><tr><th></th><th>arm2 (URDF)</th><th>cartpole (MuJoCo)</th></tr></thead>
+                <tbody>
+                  <tr><td>보이는 형상</td><td><code>purpose=default</code>, 충돌 없음</td>
+                      <td rowspan="2"><b>같은 프림이 둘 다 담당</b><br><code>purpose=default</code> + 충돌</td></tr>
+                  <tr><td>충돌 형상</td><td><code>purpose=guide</code>, 별도 프림</td></tr>
+                  <tr><td><code>VM.MAT.001</code> 대상</td>
+                      <td>시각 형상만 — <code>&lt;material&gt;</code>에서 재질 받음</td>
+                      <td>충돌 겸용 형상까지 — 재질 없음 <span class="chip no">실패</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              URDF 변환기는 시각과 충돌을 <b>분리</b>하고 충돌 쪽을 <code>guide</code>로 표시해서
+              재질 검사에서 면제시킵니다. MuJoCo 변환기는 <b>하나의 형상이 둘 다 담당</b>하게
+              만들기 때문에, 그 형상이 재질 검사 대상이 되어버립니다.
+              규격 위반이 아니라 <b>변환 관례의 차이</b>가 만든 결과입니다.
+            </p>
+            <div class="note pass">
+              <span class="lbl">여기서 배울 점 — 자동화가 복리로 쌓입니다</span>
+              새 요구사항 코드 하나를 처리하는 데 <b>검사기 한 번 읽기 + 40줄</b>이 들었습니다.
+              그리고 그 코드는 이제 <b>영구히 결정론적으로</b> 처리됩니다.
+              모델이 매번 고민할 필요가 없어집니다.
+              코드를 하나씩 추가할수록 에이전트가 개입할 몫이 줄어듭니다 — 이게 핵심 메커니즘입니다.
+              <br><br>
+              부수적으로: <b>변환기마다 약점이 다르니 반드시 두 가지 이상 포맷으로 시험</b>해야 합니다.
+            </div>
+          </div>
+        </div>
+      </li>
+    </ol>
+
+    <div class="col" style="margin-top:2.6em">
+      <div class="term">
+        <div class="term-bar"><span class="dot"></span>최종 — 저장소의 파이프라인 실행 결과</div>
+<pre><span class="d">$</span> <span class="c">./scripts/run_pipeline.sh examples/urdf/arm2.urdf</span>
+
+[1] Convert to USD                <span class="g">✓</span> urdf_usd_converter → 6 layers
+[2] USD validation                <span class="g">✓</span> no issues
+[3] SimReady baseline             <span class="r">FAIL</span> NP.005 NP.006 RB.006 GSP.001 PMT.001
+[4] Apply conformance fixes       <span class="g">✓</span> flatten + 5 fixes
+[5] SimReady re-validation        <span class="g">✓</span> <span class="g">[PASSED]</span> Prop-Robotics-Neutral v1.0.0
+[6] Physics smoke test            <span class="g">✓</span> SIMULATED 120 steps OK
+
+<span class="g">pipeline OK</span>   <span class="d">종료코드 0 — CI 게이트로 그대로 사용 가능</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ 5. 함정 -->
+<section>
+  <div class="wrap">
+    <div class="s-head"><span class="n">05</span><h2>먼저 알았으면 좋았을 함정 세 개</h2></div>
+
+    <div class="col">
+      <h3>① 설치 순서만 틀려도 파이썬이 죽습니다</h3>
+      <p>
+        가장 당연해 보이는 설치 명령이 가장 확실하게 실패합니다.
+        이것 하나로 한 시간은 날립니다.
+      </p>
+    </div>
+
+    <div class="term">
+      <div class="term-bar"><span class="dot"></span>실제로 겪은 크래시</div>
+<pre><span class="d">$</span> <span class="c">pip install usd-core usd-exchange urdf-usd-converter</span>
+Successfully installed usd-core-26.8 usd-exchange-2.3.0 ...
+
+<span class="d">$</span> <span class="c">urdf_usd_converter arm2.urdf out/arm2</span>
+<span class="r">terminate called after throwing an instance of</span>
+<span class="r">'pxrInternal_v0_25_5__pxrReserved__::pxr_boost::python::error_already_set'</span>
+<span class="r">Aborted</span>
+
+<span class="d"># 버전을 맞춰봐도 소용 없음 — 크래시 종류만 바뀜</span>
+<span class="d">$</span> <span class="c">pip install "usd-core==25.5"</span>
+<span class="r">free(): invalid pointer</span></pre>
+    </div>
+
+    <div class="col">
+      <p>
+        원인은 두 패키지가 <strong>각각 OpenUSD 전체를 자기 안에 품고 있고</strong>,
+        C++ 네임스페이스가 같아서입니다. 같은 심볼이 두 벌 로드되면서 무너집니다.
+        게다가 <code>site-packages/pxr</code> 소유권까지 겹쳐서, 지우면 더 망가집니다.
+      </p>
+      <div class="note pass">
+        <span class="lbl">해결</span>
+        <strong><code>usd-core</code>를 아예 설치하지 않습니다.</strong>
+        <code>usd-exchange</code>가 이미 <code>pxr</code>을 제공합니다.
+        그리고 <code>usd-core</code>가 <i>필요한</i> 도구(<code>simready-validate</code>)는
+        <strong>별도 venv</strong>에 둡니다. venv 두 개는 우회가 아니라 설계입니다.
+      </div>
+      <p style="font-family:var(--display);font-size:.87rem;color:var(--muted)">
+        참고로 NVIDIA도 이걸 알고 있습니다 — 다만 그 경고가
+        <code>site-packages/ovphysx/SKILLS.md</code> 파일 <b>안에만</b> 적혀 있어서,
+        설치하고 나서야 볼 수 있습니다.
+      </p>
+
+      <h3>② 검증기의 자동 수정은 어디까지 해주나</h3>
+      <p>
+        일부러 망가뜨린 파일에 <code>--fix</code>를 걸어봤습니다. 결과가 흥미롭습니다.
+      </p>
+    </div>
+
+    <div class="term">
+      <div class="term-bar"><span class="dot"></span>nvidia_usd_validate --fix</div>
+<pre><span class="d">$</span> <span class="c">nvidia_usd_validate broken.usda --fix</span>
+Subdivision scheme is not set ......... <span class="g">FixStatus.SUCCESS</span>   <span class="d">(×2)</span>
+Prim does not have any extent value ... <span class="g">FixStatus.SUCCESS</span>   <span class="d">(×2)</span>
+Stage does not specify an upAxis ...... <span class="a">FixStatus.NO_LOCATION</span>
+Invalid topology found ................ <span class="a">FixStatus.NO_SUGGESTION</span>
+
+<span class="d">재검사 → 6개 실패에서 2개로</span></pre>
+    </div>
+
+    <div class="col">
+      <p>
+        6개 중 4개는 기계가 알아서 고칩니다. 남은 2개가 정확히
+        <strong>판단이 필요한 것들</strong>입니다 — <code>NO_LOCATION</code>은
+        “어느 레이어에 써야 할지 결정해야 함”, <code>NO_SUGGESTION</code>은
+        “진짜 데이터 오류”(없는 정점을 참조하고 있었습니다).
+      </p>
+      <div class="note">
+        <span class="lbl">작업 분담이 여기서 나옵니다</span>
+        <code>SUCCESS</code>가 나오는 것에 모델을 쓰면 <b>토큰 낭비이고 위험만 늘어납니다</b>.
+        에이전트는 <code>NO_LOCATION</code>과 <code>NO_SUGGESTION</code>에만 투입해야 합니다.
+        이 한 가지 원칙이 비용과 신뢰도를 동시에 좌우합니다.
+      </div>
+
+      <h3>③ Real2Sim 변환 결과가 자기네 검증기를 통과하지 못합니다</h3>
+      <p>
+        현실을 3D로 재구성한 결과(가우시안 스플랫)를 USD로 바꾸는 도구를 돌려봤습니다.
+        변환은 잘 되는데, <strong>NVIDIA 자체 검증기에서 2개 실패</strong>합니다.
+      </p>
+    </div>
+
+    <figure>
+      <img src="{{FIG:gsplat-scene}}" alt="가우시안 스플랫 2000개의 위에서 본 모습, 앞에서 본 모습, 3D 모습">
+      <figcaption>
+        <b>USD로 변환된 3D 재구성 데이터를 다시 읽어 그린 것.</b>
+        바닥면(회색)과 물체(붉은 기둥)가 제대로 들어갔습니다.
+        <code>ParticleField3DGaussianSplat</code>이라는 정식 USD 타입으로 저장되므로,
+        CAD 자산과 같은 씬에 섞어 쓸 수 있습니다. 여기서는 재구성 결과를 합성해서 만들었습니다 —
+        실제 NuRec 학습은 GPU가 필요합니다.
+      </figcaption>
+    </figure>
+
+    <div class="col">
+      <div class="tw">
+        <table>
+          <thead><tr><th>실패</th><th>해결</th><th>결과</th></tr></thead>
+          <tbody>
+            <tr><td><code>ByteAlignmentChecker</code></td>
+                <td><code>.usdz</code> 대신 <code>.usdc</code>로 저장</td>
+                <td><span class="chip mid">2 → 1</span></td></tr>
+            <tr><td><code>DefaultPrimChecker</code></td>
+                <td><code>/World</code> Xform으로 감싸기</td>
+                <td><span class="chip ok">1 → 0</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        두 번째는 형식 문제가 아닙니다. 기본 프림이 <b>변환 불가능</b>하면
+        그 재구성 결과를 씬에 <b>배치·정렬·복제할 수 없습니다</b> —
+        USD로 바꾸는 이유 자체가 사라집니다.
+        Real2Sim을 쓸 거면 이 후처리를 재구성 직후에 반드시 넣어야 합니다.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ 6. GPU 경계 -->
+<section>
+  <div class="wrap">
+    <div class="s-head"><span class="n">06</span><h2>GPU 없이 어디까지 되나</h2></div>
+    <div class="col">
+      <p>
+        생각보다 중요한 질문입니다. 이게 <strong>에이전트를 CI에 넣을 수 있는지</strong>를
+        결정하기 때문입니다. GPU가 필요하면 자동화 비용이 완전히 달라집니다.
+      </p>
+    </div>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>기능</th><th>CPU</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td>USD 작성·검사 (<code>usd-exchange</code>)</td>
+              <td><span class="chip ok">가능</span></td><td>OpenUSD 파이썬 전체</td></tr>
+          <tr><td>URDF·MuJoCo → USD 변환</td>
+              <td><span class="chip ok">가능</span></td><td>수초</td></tr>
+          <tr><td>3D 재구성(PLY) → USD</td>
+              <td><span class="chip ok">가능</span></td><td>스플랫 2000개 1초 미만</td></tr>
+          <tr><td>USD 검증 + 자동 수정</td>
+              <td><span class="chip ok">가능</span></td><td>JSON 출력, 실패 시 종료코드 1</td></tr>
+          <tr><td>SimReady 규격 검사</td>
+              <td><span class="chip ok">가능</span></td><td>feature 단위 JSON</td></tr>
+          <tr><td>강체 물리 (<code>ovphysx</code>, Newton)</td>
+              <td><span class="chip ok">가능</span></td><td>GPU broadphase → CPU 자동 전환</td></tr>
+          <tr><td>학습 환경 병렬 복제</td>
+              <td><span class="chip ok">가능</span></td><td>4개 환경 확인</td></tr>
+          <tr><td>변형체·입자 물리</td>
+              <td><span class="chip no">불가</span></td><td>CUDA 필수</td></tr>
+          <tr><td>렌더링·센서 시뮬 (<code>ovrtx</code>)</td>
+              <td><span class="chip no">불가</span></td><td>RTX GPU 필수</td></tr>
+          <tr><td>영상 스트리밍 (<code>ovstream</code>)</td>
+              <td><span class="chip no">불가</span></td><td>초기화조차 실패</td></tr>
+          <tr><td>NuRec 3D 재구성 <i>학습</i></td>
+              <td><span class="chip no">불가</span></td><td>Ampere+ VRAM 16 GB+</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col">
+      <div class="note pass">
+        <span class="lbl">결론</span>
+        <strong>자산 준비와 검증 — 파이프라인의 앞쪽 절반 전체가 평범한 CPU 러너에서
+        돌아갑니다.</strong> GPU는 재구성·렌더링·대규모 강화학습에만 필요합니다.
+        즉 지금 당장 GPU 없이 자동화를 시작할 수 있습니다.
+      </div>
+      <p style="font-family:var(--display);font-size:.87rem;color:var(--muted)">
+        작은 함정 하나 더: <code>libOpenGL.so.0</code>이 없으면 Nucleus 서버
+        (<code>omniverse://</code>) 주소를 못 읽습니다. GPU와 무관하게
+        <code>apt-get install libopengl0 libglx0 libgl1</code>로 해결됩니다.
+        컨테이너 이미지에 넣어두는 게 좋습니다.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ 7. Sim2Real -->
+<section>
+  <div class="wrap">
+    <div class="s-head"><span class="n">07</span><h2>Sim2Real과 Real2Sim</h2></div>
+    <div class="col">
+      <p>
+        방향이 반대인 두 가지입니다. 헷갈리기 쉬우니 구분해두면 좋습니다.
+      </p>
+
+      <h3>Real2Sim — 현실을 시뮬레이션으로</h3>
+      <p>
+        카메라·라이다로 찍은 현실을 시뮬레이션 가능한 자산으로 바꿉니다.
+        단계는 이렇습니다.
+      </p>
+      <ul class="plain">
+        <li><span class="chip mid">GPU</span><span>영상에서 카메라 위치 추정 — <code>amc-*</code> 스킬</span></li>
+        <li><span class="chip mid">GPU</span><span>센서 기록을 NCore 형식으로 — <code>ncore</code></span></li>
+        <li><span class="chip mid">GPU</span><span>3D 가우시안 재구성 학습 — <code>nre</code>, VRAM 16 GB+</span></li>
+        <li><span class="chip ok">CPU</span><span><strong>재구성 결과를 USD로 — 여기만 검증했습니다</strong></span></li>
+        <li><span class="chip mid">GPU</span><span>시뮬레이터에 공급 — NuRec <code>serve-grpc</code></span></li>
+      </ul>
+      <p>
+        캡처 장비가 없으면 <code>physical-ai-datasets</code> 스킬로 NVIDIA가 공개한
+        데이터셋을 쓸 수 있습니다(Hugging Face, 라이선스 동의 필요).
+      </p>
+
+      <h3>Sim2Real — 시뮬레이션에서 배운 것을 현실로</h3>
+      <p>
+        시뮬레이션에서 학습한 정책이 실제 로봇에서도 작동하게 만드는 일입니다.
+        간극이 두 종류입니다.
+      </p>
+      <ul class="plain">
+        <li><span class="chip mid">시각</span><span>합성 영상이 실제 카메라 영상과 다름 →
+            <b>Cosmos Transfer</b>가 구조를 보존하며 사실적으로 변환</span></li>
+        <li><span class="chip mid">물리</span><span>시뮬 마찰·질량이 현실과 다름 →
+            <b>Isaac Lab의 도메인 랜덤화</b>가 파라미터를 흔들어 과적합 방지</span></li>
+      </ul>
+      <div class="note">
+        <span class="lbl">SimReady가 왜 이것의 앞단인가</span>
+        <code>PMT.001</code>이 “모든 충돌 형상에 물리 재질을 연결하라”고 요구하는 이유가
+        여기 있습니다. 마찰·반발 계수가 바로 도메인 랜덤화가 흔드는 값입니다.
+        물리 재질이 안 붙은 자산은 <b>흔들 대상이 없어서</b>, 엔진 기본값에 과적합된
+        정책만 나옵니다. 규격 준수가 형식주의가 아니라는 뜻입니다.
+      </div>
+
+      <h3>참고할 만한 완성 예시</h3>
+      <p>
+        Isaac for Healthcare의 <code>i4h-*</code> 스킬 18개가 공개된 것 중 가장 완성된
+        폐루프입니다. 의료용이 아니어도 <strong>단계 쪼개는 방식</strong>은 그대로 참고할 만합니다:
+        씬 편집 → 사람 시연 수집 → 시연을 여러 궤적으로 증식 → 라벨링 → 학습 → 검증.
+      </p>
+      <p>
+        훔칠 만한 설계 결정 두 개. 첫째, <strong>모든 단계를 따로 실행할 수 있게 만들면서
+        전체를 한 번에 돌리는 <code>-e2e</code> 스킬도 따로</strong> 둡니다.
+        둘째, <strong><code>smoke</code>와 <code>validate</code>를 별도 스킬로</strong> 취급합니다 —
+        빠른 검사가 있어야 자동 루프를 안심하고 돌려둘 수 있습니다.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ 8. 적용 -->
+<section>
+  <div class="wrap">
+    <div class="s-head"><span class="n">08</span><h2>어떻게 시작하면 되나</h2></div>
+    <div class="col">
+      <p>
+        전체를 관통하는 원칙 하나만 기억하시면 됩니다.
+        <strong>생성기보다 검사기를 먼저 설치하세요.</strong>
+        판정할 수 없으면 자동화는 그럴듯한 결과물만 만들어냅니다.
+      </p>
+
+      <h3>0단계 — 기준선 만들기 <span style="color:var(--muted);font-weight:400">· 하루, GPU 불필요</span></h3>
+      <div class="term">
+        <div class="term-bar"><span class="dot"></span>저장소에서 바로</div>
+<pre><span class="d">$</span> <span class="c">./scripts/bootstrap_env.sh</span>          <span class="d"># venv 2개 + 규격 파일, 약 3분</span>
+<span class="d">$</span> <span class="c">./scripts/run_pipeline.sh examples/urdf/arm2.urdf</span></pre>
+      </div>
+      <p>
+        그리고 <strong>사용자님 자산 하나를 넣어보세요.</strong> URDF나 MuJoCo면 경로가 같습니다.
+        CAD(STEP·JT 등)라면 <code>usd-convert-cad</code>가 필요한데, Kit 런타임과
+        별도 라이선스가 걸려 있어서 따로 계획하셔야 합니다.
+      </p>
+      <p style="font-family:var(--display);font-size:.9rem">
+        <b>통과 기준:</b> 사용자님 자산 하나가 <code>[PASSED]</code>에 도달.
+      </p>
+
+      <h3>1단계 — CI 게이트로 걸기 <span style="color:var(--muted);font-weight:400">· 2~3일, GPU 불필요</span></h3>
+      <p>
+        <code>run_pipeline.sh</code>는 회귀 시 종료코드 1을 반환하므로 그대로 쓸 수 있습니다.
+        두 가지만 챙기면 시간을 아낍니다. <code>~/.cache/warp/</code>를 캐시하세요 —
+        Warp가 첫 실행에 3.5초 컴파일합니다. venv 두 개도 캐시하세요.
+      </p>
+      <p style="font-family:var(--display);font-size:.9rem">
+        <b>통과 기준:</b> 자산 품질을 떨어뜨리는 PR이 사람 검토 없이 자동 차단됨.
+      </p>
+
+      <h3>2단계 — 에이전트 투입 <span style="color:var(--muted);font-weight:400">· 1주</span></h3>
+      <div class="term">
+        <div class="term-bar"><span class="dot"></span>스킬 설치</div>
+<pre><span class="d">$</span> <span class="c">npx skills add nvidia/skills \
+    --skill omniverse-cad-to-simready omniverse-usd-performance-tuning \
+    --agent claude-code --yes</span>
+
+  omniverse-cad-to-simready   <span class="g">Safe</span>   0 alerts
+  <span class="g">✓</span> installed → ./.claude/skills/...
+<span class="a">Review skills before use; they run with full agent permissions.</span></pre>
+      </div>
+      <p>
+        그리고 에이전트에게 <strong>작업 분담을 명시</strong>하세요. 이게 가장 중요한 결정입니다.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>신호</th><th>담당</th></tr></thead>
+          <tbody>
+            <tr><td><code>--fix</code> → <code>SUCCESS</code></td>
+                <td>도구. <b>모델을 부르지 말 것</b></td></tr>
+            <tr><td><code>NO_LOCATION</code></td><td>에이전트 — 어느 레이어가 소유할지 판단</td></tr>
+            <tr><td><code>NO_SUGGESTION</code></td><td>에이전트 — 실제 데이터 오류</td></tr>
+            <tr><td>이미 처리된 요구사항 코드</td><td>스크립트. 그냥 실행</td></tr>
+            <tr><td><b>처리되지 않은 코드</b></td>
+                <td><b>에이전트 — 검사기 소스를 읽고 수정기를 확장</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        마지막 줄이 복리로 쌓이는 부분입니다. 규격이 실행 가능한 파이썬이니
+        에이전트가 검사기를 읽고 수정 코드를 추가할 수 있고, 그럴수록
+        <strong>결정론적으로 처리되는 비율이 올라갑니다</strong>.
+        단, 수정할 때마다 물리 검사를 반드시 함께 돌리세요 —
+        검사는 통과하는데 시뮬레이션이 깨지는 변경은 개선이 아니라 회귀입니다.
+      </p>
+
+      <h3>3단계 — GPU가 필요해지는 시점 <span style="color:var(--muted);font-weight:400">· 2~4주</span></h3>
+      <p>
+        여기서야 GPU가 값을 합니다. 투자 대비 효과 순서는
+        <code>ovrtx</code> 렌더링 → Isaac Lab 강화학습 → NuRec Real2Sim →
+        Cosmos·OSMO 워크플로입니다. MCP 서버도 이 단계에서 띄우세요 —
+        자산 처리가 아니라 Kit·Isaac 코드를 직접 쓰기 시작할 때 값을 합니다.
+      </p>
+
+      <h3>직접 만들 가치가 있는 것</h3>
+      <ul class="plain">
+        <li><span class="chip mid">핵심</span>
+            <span><b>요구사항 코드 → 수정기 등록표.</b> 지금 6개를 처리합니다.
+            수십 개가 있습니다. 코드로 분기하는 표를 만들고 에이전트가 항목을 추가하게 하는 것이
+            가장 값나가는 자산입니다.</span></li>
+        <li><span class="chip mid">결정</span>
+            <span><b>변환기 출력 규칙을 집안 표준으로.</b> NP.005와 다층 구조 충돌은
+            한 번 결정해서 한 곳에 적어두세요. 스크립트마다 흩어지면 관리가 안 됩니다.</span></li>
+        <li><span class="chip mid">안전</span>
+            <span><b>물리 보존 회귀 테스트.</b> 지금은 “도는지”만 봅니다.
+            수정 전후 궤적을 비교하면 훨씬 강해집니다.</span></li>
+      </ul>
+
+      <div class="note warn">
+        <span class="lbl">위험 세 가지</span>
+        <b>스킬은 전체 에이전트 권한으로 실행되는 스크립트를 포함합니다</b> —
+        설치 시 스캔이 돌지만, 검토하고 버전을 고정하고 서명을 검증하세요.
+        <b>생태계가 며칠밖에 안 됐습니다</b> — Omniverse Libraries는 2026년 7월 20일 발표입니다.
+        버전이 흔들릴 것을 전제하고 전부 핀으로 고정하세요.
+        <b>NVIDIA 도구끼리 이미 한 군데 어긋나 있습니다</b> — 더 나올 것을 예상하세요.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════ 9. 한계 -->
+<section>
+  <div class="wrap">
+    <div class="s-head"><span class="n">09</span><h2>검증하지 못한 것</h2></div>
+    <div class="col">
+      <p>
+        위 내용을 과대해석하지 않으시도록 명확히 적습니다.
+        아래는 <strong>저장소에서 목록만 확인</strong>했고, 실제 동작은 확인하지 못했습니다.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>영역</th><th>막힌 이유</th></tr></thead>
+          <tbody>
+            <tr><td>MCP 서버 4개</td><td><code>NVIDIA_API_KEY</code> 필요</td></tr>
+            <tr><td><code>ovrtx</code> 렌더링·센서 시뮬</td><td>RTX GPU 필요</td></tr>
+            <tr><td>NuRec 3D 재구성 학습</td><td>Ampere+ GPU, NGC 키, HF 라이선스</td></tr>
+            <tr><td>Cosmos Transfer · AnomalyGen</td><td>OSMO 클러스터 필요</td></tr>
+            <tr><td><code>usd-convert-cad</code> (STEP·JT·DGN)</td><td>Kit 런타임 + CAD 변환 라이선스</td></tr>
+            <tr><td>Content Agents 재질·물리 자동 배정</td><td>Docker + GPU + API 키</td></tr>
+            <tr><td>Isaac Sim · Isaac Lab</td><td>GPU 필요</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        또한 “Cosmos Transfer가 시각 간극을 줄인다”와 “도메인 랜덤화가 실제 전이를 개선한다”는
+        각각 NVIDIA의 주장과 학계의 정설이지만, <strong>여기서 재현한 것은 아닙니다</strong>.
+        설계 입력으로 참고하시고, 사용자님 하드웨어에서 확인하실 항목으로 두시는 게 맞습니다.
+      </p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap col">
+    <p style="margin-bottom:.4em">
+      이 문서의 모든 그림은 파이프라인이 실제로 만들어낸 산출물(USD 스테이지, 궤적 CSV,
+      검증기 JSON)에서 직접 그린 것입니다. Omniverse 뷰포트 스크린샷은 없습니다 —
+      뷰포트 렌더링에는 <code>ovrtx</code>와 GPU가 필요하고, 이 환경에는 없었습니다.
+      재현 방법은 저장소의 <code>scripts/make_figures.py</code>에 있습니다.
+    </p>
+    <p style="margin:1.4em 0 .3em"><b>출처</b></p>
+    <ul>
+      <li><a href="https://github.com/NVIDIA/skills">NVIDIA/skills</a> — 스킬 카탈로그</li>
+      <li><a href="https://github.com/NVIDIA-Omniverse/kit-usd-agents">kit-usd-agents</a> — MCP 서버 4종</li>
+      <li><a href="https://github.com/NVIDIA/simready-foundation">simready-foundation</a> — SimReady 규격</li>
+      <li><a href="https://github.com/NVIDIA/nurec-skills">nurec-skills</a> — Real2Sim</li>
+      <li><a href="https://developer.nvidia.com/omniverse">Omniverse Libraries</a> ·
+          <a href="https://nvidianews.nvidia.com/news/nvidia-agent-toolkit-expands-with-new-omniverse-libraries-putting-ai-agents-to-work-building-simulation-ready-worlds">발표문 (2026-07-20)</a></li>
+    </ul>
+  </div>
+</footer>

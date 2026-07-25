@@ -19,6 +19,7 @@ not summarized from documentation.
 | **MCP setup** | The 4 Omniverse MCP servers, ports, tools, client config — [`docs/04-mcp-setup.md`](docs/04-mcp-setup.md) |
 | **Adoption** | A staged plan to get from zero to agent-run pipelines — [`docs/05-adoption-roadmap.md`](docs/05-adoption-roadmap.md) |
 | **Working code** | A conformance agent that takes a converted robot from *failing* to *SimReady PASS* — [`scripts/`](scripts/) |
+| **Illustrated report** | The whole investigation written for a newcomer, with figures — [`docs/report.html`](docs/report.html) |
 
 ---
 
@@ -71,6 +72,19 @@ npx skills add nvidia/skills \
 `run_pipeline.sh` prints a stage-by-stage report and exits non-zero if any stage regresses,
 so it works as a CI gate as-is.
 
+To regenerate the illustrated report — figures are plotted from the pipeline's own
+artifacts, so they only exist after a run:
+
+```bash
+./scripts/run_pipeline.sh examples/urdf/arm2.urdf
+./scripts/run_pipeline.sh examples/mujoco/cartpole.xml
+.venv-ov/bin/python scripts/record_trajectory.py \
+    .out/arm2/conformed/arm2/arm2.usda \
+    --pattern '/arm2/Geometry/base_link*' --steps 400 --kick 2.0 --csv .out/arm2/traj.csv
+.venv-ov/bin/python scripts/make_figures.py --outdir docs/figures
+.venv-ov/bin/python scripts/build_report.py          # inlines figures -> docs/report.html
+```
+
 ---
 
 ## Scale of the ecosystem
@@ -106,6 +120,7 @@ This matters more than it sounds — it decides whether agents can run in CI.
 | Rigid-body physics (`ovphysx`, Newton/Warp) | ✅ | auto-falls back to CPU |
 | Deformables, particles, `EnvIds` filtering | ❌ | CUDA required |
 | Rendering / sensor sim (`ovrtx`) | ❌ | RTX GPU required |
+| Pixel streaming (`ovstream`) | ❌ | `initialize()` fails — no `libcuda.so.1` |
 | NuRec 3DGS *training* | ❌ | Ampere+, 16 GB+ VRAM |
 
 So: **the entire asset-preparation and validation half of the pipeline is CI-able on
@@ -116,12 +131,19 @@ CPU runners.** Only reconstruction, rendering and large-scale RL need GPUs.
 ## Layout
 
 ```
-docs/         analysis and setup guides (5 documents)
-scripts/      bootstrap, pipeline runner, conformance agent, Real2Sim post-process
-examples/     the URDF / MuJoCo / 3DGS fixtures used in every verified run
-.mcp.json     Omniverse MCP server registration
-CLAUDE.md     session instructions for agents working in this repo
+docs/               analysis and setup guides (5 documents)
+docs/report.html    illustrated beginner-facing report (self-contained)
+docs/figures/        figures, plotted from pipeline artifacts
+scripts/            bootstrap, pipeline runner, conformance agent,
+                    Real2Sim post-process, trajectory recorder, figure/report build
+examples/           the URDF / MuJoCo / 3DGS fixtures used in every verified run
+.mcp.json           Omniverse MCP server registration
+CLAUDE.md           session instructions for agents working in this repo
 ```
+
+Every figure is plotted from data read back out of the USD stages, the trajectory CSV and
+the validator JSON. None are viewport screenshots — viewport rendering needs `ovrtx` and a
+GPU, which this environment did not have.
 
 ## Sources
 

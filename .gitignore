@@ -13,3 +13,6 @@
 __pycache__/
 *.py[cod]
 .cache/
+
+# figure intermediates (PNG masters are kept; webp is derived at build time)
+docs/figures/*.webp
