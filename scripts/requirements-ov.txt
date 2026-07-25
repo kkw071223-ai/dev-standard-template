@@ -1,0 +1,37 @@
+# Omniverse CPU environment — verified 2026-07-25 on Linux x86_64 / Python 3.11.15
+#
+# DO NOT ADD usd-core.
+# usd-exchange vendors a complete OpenUSD build (pxrInternal_v0_25_5) and owns
+# site-packages/pxr. Installing usd-core alongside it loads two copies of the
+# same C++ symbols and aborts with:
+#   terminate called after throwing an instance of
+#   'pxrInternal_v0_25_5__pxrReserved__::pxr_boost::python::error_already_set'
+# NVIDIA documents this in site-packages/ovphysx/SKILLS.md.
+# simready-validate needs usd-core, so it lives in .venv-simready instead.
+
+# --- OpenUSD + Exchange SDK (also provides `pxr`) -----------------------------
+usd-exchange==2.3.0
+
+# --- converters ---------------------------------------------------------------
+urdf-usd-converter==0.3.0
+mujoco-usd-converter==0.4.0
+usd-convert-gsplat==0.1.15
+
+# --- validation ---------------------------------------------------------------
+usd-validation-nvidia==1.20.0
+
+# --- Omniverse Libraries ------------------------------------------------------
+ovstage==0.1.0.346039
+ovphysx==0.5.9
+ovrtx==0.4.0.346409
+ovstream==0.4.5
+ovstorage==0.1.0
+
+# --- physics ------------------------------------------------------------------
+newton==1.4.0
+warp-lang==1.15.0
+
+# --- transitive, pinned for reproducibility -----------------------------------
+newton-usd-schemas==0.4.0
+mujoco==3.10.0
+numpy==2.3.1

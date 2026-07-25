@@ -1,122 +1,129 @@
-# 개발 표준 포맷 — AI Agent + GitHub + Notion 바이브코딩 프레임워크
+# Omniverse Agent Stack
 
-> 이 저장소는 **AI Agent + GitHub + Notion** 기반 바이브코딩 표준 프레임워크의 템플릿입니다.
-> 모든 협력사 및 개발 인원이 동일한 구조로 개발을 진행할 수 있도록 재현성과 반복성을 보장합니다.
+An agent-driven development environment built on the **NVIDIA Omniverse** ecosystem —
+not on a general-purpose coding assistant alone.
 
----
-
-## 워크플로우 구조도
-
-```mermaid
-flowchart TD
-    A[새 프로젝트 시작] --> B[GitHub: Use this template]
-    A --> C[Notion: 개발 표준 포맷 Duplicate]
-    B --> D[프로젝트 저장소 생성]
-    C --> E[Notion 페이지 생성 + 내용 채우기]
-    D & E --> F[협력사/동료 초대\nGitHub collaborator + Notion 공유]
-    F --> G[Claude Code 실행\nCLAUDE.md 자동 로드]
-    G --> H[docs/dev-guide.md 읽기\n.dev-config.yaml 파싱]
-    H --> I[Notion WBS 확인\n담당 항목 상태 → 진행중]
-    I --> J[feature 브랜치 생성\n코드 작성]
-    J --> K[docs/specs/ 기능명세 갱신\ndocs/diagrams/ 다이어그램 갱신]
-    K --> L[PR 생성\nPR 템플릿 체크리스트 완료]
-    L --> M[Notion WBS 진도율 업데이트]
-    M --> N{이슈 발생?}
-    N -->|Yes| O[Notion 이슈관리 DB 등록]
-    N -->|No| P[작업 완료]
-    O --> P
-```
+Everything in this repository was **executed and verified in a sandbox** (Linux x86_64,
+Python 3.11, **no GPU**). Commands, outputs, failures and fixes are recorded as observed,
+not summarized from documentation.
 
 ---
 
-## 저장소 파일 구조 및 역할
+## What this repository gives you
 
-```
-(repo root)
-├── CLAUDE.md                          ← Claude Code 세션 자동 로드 (에이전트 진입점)
-├── .dev-config.yaml                   ← 코딩 표준 설정 (Config ①~⑤, 에이전트 파싱용)
-├── README.md                          ← 지금 읽고 있는 파일
-└── docs/
-    ├── dev-guide.md                   ← 통합 개발 가이드 (에이전트 필수 참조, Notion URL 포함)
-    ├── WORKFLOW.md                    ← 관리자/협력사 전체 워크플로우 정의
-    ├── ONBOARDING.md                  ← 협력사/동료 환경설정 및 시작 절차
-    ├── diagrams/                      ← 코드 구조 다이어그램 (mermaid, TD 방향)
-    └── specs/                         ← 파일별 기능명세 md
-```
-
-| 파일 | 주요 독자 | 핵심 내용 |
-|---|---|---|
-| `CLAUDE.md` | 에이전트 (자동 로드) | 읽기 순서 지시, 작업 체크리스트 |
-| `docs/dev-guide.md` | 에이전트 + 사람 | 프로젝트 개요, 기술스택, 코드 규칙, Notion URL |
-| `.dev-config.yaml` | 에이전트 (파싱) | 코딩 표준 설정값, 자동화 트리거 |
-| `docs/WORKFLOW.md` | 관리자 + 협력사 | 전체 워크플로우, 환경설정 체크리스트 |
-| `docs/ONBOARDING.md` | 협력사/동료 | 환경설정 방법, 시작 절차, FAQ |
-| `.github/PULL_REQUEST_TEMPLATE.md` | PR 작성자 | PR 체크리스트 |
-
----
-
-## Notion 페이지 구조
-
-```
-개발 표준 포맷 (최상위 페이지)
-├── 설계
-│   ├── RFP
-│   │   ├── 원본 데이터
-│   │   └── 가공 데이터
-│   ├── WBS (DB)
-│   └── 개발지침서
-│       ├── Config
-│       └── 개발 가이드
-└── 개발
-    ├── 진척현황
-    │   ├── [WBS DB Linked View]
-    │   └── 주차별 진척관리 (DB)
-    └── 이슈관리 (DB)
-```
-
----
-
-## 빠른 시작
-
-### 관리자 (프로젝트 소유자)
-1. 이 저장소 → **"Use this template"** 으로 새 저장소 생성
-2. Notion `개발 표준 포맷` 페이지 → **Duplicate** → 프로젝트명으로 변경
-3. `docs/dev-guide.md` 실제 프로젝트 내용으로 업데이트
-4. Notion WBS에 개발 항목 입력 + 담당자 배정
-5. 협력사/동료 초대 후 `docs/ONBOARDING.md` 공유
-
-> 상세 절차 → [docs/WORKFLOW.md](docs/WORKFLOW.md)
-
-### 협력사 / 동료
-1. 관리자에게 GitHub URL + Notion URL + 담당 WBS 항목 받기
-2. 저장소 clone 후 Claude Code 실행 (CLAUDE.md 자동 로드)
-3. `"docs/dev-guide.md 읽고 WBS [항목명] 확인 후 작업 시작해줘"` 한 줄이면 시작
-
-> 상세 환경 설정 → [docs/ONBOARDING.md](docs/ONBOARDING.md)
-
----
-
-## 개발 시작 전 체크리스트
-
-- [ ] `docs/dev-guide.md` 읽기 완료
-- [ ] `.dev-config.yaml` 설정값 파악 완료
-- [ ] Notion WBS에서 현재 작업 항목 확인
-- [ ] 브랜치 네이밍 규칙 준수: `feature/{feature-name}` / `hotfix/{issue-name}`
-- [ ] 파일 헤더 주석 작성 (Config ③ 기준)
-- [ ] commit/push 후 `docs/diagrams/`, `docs/specs/` 갱신
-- [ ] Notion WBS 진도율 업데이트
-
----
-
-## 기술 스택 (기본값 — 프로젝트별 수정)
-
-| 구성 요소 | 기술 |
+| | |
 |---|---|
-| AI Agent | Claude (Sonnet) |
-| VCS | GitHub |
-| 문서/지식관리 | Notion |
-| 다이어그램 | Mermaid |
+| **Catalog** | Every Omniverse-related agent, skill, MCP server and library, counted and named — [`docs/01-catalog.md`](docs/01-catalog.md) |
+| **Evidence** | What actually ran, with real inputs/outputs and the traps that bite — [`docs/02-verified-findings.md`](docs/02-verified-findings.md) |
+| **Sim2Real / Real2Sim** | How the pieces compose into closed loops — [`docs/03-sim2real-real2sim.md`](docs/03-sim2real-real2sim.md) |
+| **MCP setup** | The 4 Omniverse MCP servers, ports, tools, client config — [`docs/04-mcp-setup.md`](docs/04-mcp-setup.md) |
+| **Adoption** | A staged plan to get from zero to agent-run pipelines — [`docs/05-adoption-roadmap.md`](docs/05-adoption-roadmap.md) |
+| **Working code** | A conformance agent that takes a converted robot from *failing* to *SimReady PASS* — [`scripts/`](scripts/) |
 
 ---
 
-*이 저장소는 프로젝트에 독립적인 범용 템플릿입니다. 신규 프로젝트 시작 시 "Use this template"으로 복제하여 사용하세요.*
+## The headline result
+
+A robot asset was driven end-to-end through the real toolchain:
+
+```
+arm2.urdf                                    3 links, 2 revolute joints
+   │
+   ├─ urdf_usd_converter ─────────────────►  USD Atomic Asset (6 layers)
+   │                                          nvidia_usd_validate: PASS
+   │
+   ├─ simready-validate ──────────────────►  FAIL — 6 issues, 2/6 features
+   │                                          NP.005 NP.006 RB.006 GSP.001 PMT.001
+   │
+   ├─ scripts/simready_conform.py ────────►  flatten + 4 targeted fixes
+   │
+   ├─ simready-validate ──────────────────►  PASS — 6/6 features
+   │
+   └─ ovphysx ────────────────────────────►  120 simulation steps, stable
+```
+
+The same pipeline on a MuJoCo cartpole also reaches 6/6 — after adding one more fix
+(`VM.MAT.001`), because the MuJoCo converter omits visual materials the URDF converter
+emits. Different converters fail different requirements; test more than one.
+
+The gap between "converted" and "simulation-ready" is a handful of **specific,
+machine-readable requirement codes**. That gap is the work an agent can own — and every
+code you teach the fixer moves permanently out of the model's column. See
+[`docs/02-verified-findings.md`](docs/02-verified-findings.md) for the full transcript.
+
+---
+
+## Quick start
+
+```bash
+# 1. Build the verified CPU environment (~3 min, no GPU needed)
+./scripts/bootstrap_env.sh
+
+# 2. Run the whole pipeline on the bundled robot
+./scripts/run_pipeline.sh examples/urdf/arm2.urdf
+
+# 3. Install the Omniverse agent skills into this repo
+npx skills add nvidia/skills \
+  --skill omniverse-cad-to-simready omniverse-usd-performance-tuning \
+  --agent claude-code --yes
+```
+
+`run_pipeline.sh` prints a stage-by-stage report and exits non-zero if any stage regresses,
+so it works as a CI gate as-is.
+
+---
+
+## Scale of the ecosystem
+
+| Layer | Count | Verified |
+|---|---|---|
+| Omniverse / Physical AI skills (top-level routers) | 8 | ✅ installed |
+| ├─ nested sub-skills under those routers | 81 | ✅ enumerated |
+| SimReady Foundation skills | 25 | ✅ cloned |
+| Isaac-for-Healthcare (`i4h-*`) skills | 18 | ✅ enumerated |
+| Camera-calibration (`amc-*`) skills | 3 | ✅ enumerated |
+| Skills bundled inside `pip install ovphysx` | 6 | ✅ executed |
+| Omniverse MCP servers | 4 (34 tools) | ⚠️ needs API key |
+| `pip`-installable Omniverse libraries | 11 of 13 | ✅ installed |
+| NVIDIA skills catalog (all products) | 322 dirs | ✅ cloned |
+
+Your "40–50+" estimate was low for the Omniverse slice alone: **141 skill units** are
+reachable before counting the wider NVIDIA catalog.
+
+---
+
+## What works without a GPU
+
+This matters more than it sounds — it decides whether agents can run in CI.
+
+| Capability | CPU | Notes |
+|---|---|---|
+| USD authoring / inspection (`usd-exchange`) | ✅ | full OpenUSD Python |
+| URDF → USD, MuJoCo → USD | ✅ | seconds |
+| 3DGS PLY → USD (`usd-convert-gsplat`) | ✅ | 2k splats < 1 s |
+| `nvidia_usd_validate` (+ `--fix`) | ✅ | JSON out, exit 1 on fail |
+| `simready-validate` profile conformance | ✅ | feature-level JSON |
+| Rigid-body physics (`ovphysx`, Newton/Warp) | ✅ | auto-falls back to CPU |
+| Deformables, particles, `EnvIds` filtering | ❌ | CUDA required |
+| Rendering / sensor sim (`ovrtx`) | ❌ | RTX GPU required |
+| NuRec 3DGS *training* | ❌ | Ampere+, 16 GB+ VRAM |
+
+So: **the entire asset-preparation and validation half of the pipeline is CI-able on
+CPU runners.** Only reconstruction, rendering and large-scale RL need GPUs.
+
+---
+
+## Layout
+
+```
+docs/         analysis and setup guides (5 documents)
+scripts/      bootstrap, pipeline runner, conformance agent, Real2Sim post-process
+examples/     the URDF / MuJoCo / 3DGS fixtures used in every verified run
+.mcp.json     Omniverse MCP server registration
+CLAUDE.md     session instructions for agents working in this repo
+```
+
+## Sources
+
+- [NVIDIA/skills](https://github.com/NVIDIA/skills) · [NVIDIA-Omniverse/kit-usd-agents](https://github.com/NVIDIA-Omniverse/kit-usd-agents) · [NVIDIA/simready-foundation](https://github.com/NVIDIA/simready-foundation) · [NVIDIA/nurec-skills](https://github.com/NVIDIA/nurec-skills)
+- [Omniverse Libraries](https://developer.nvidia.com/omniverse) · [Agent Toolkit + Omniverse Libraries announcement (2026-07-20)](https://nvidianews.nvidia.com/news/nvidia-agent-toolkit-expands-with-new-omniverse-libraries-putting-ai-agents-to-work-building-simulation-ready-worlds)

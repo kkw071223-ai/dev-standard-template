@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+# End-to-end Omniverse asset pipeline. Exits non-zero if any stage regresses,
+# so it works as a CI gate as-is.
+#
+#   robot source (URDF/MuJoCo)
+#     -> USD                     urdf_usd_converter / mujoco_usd_converter
+#     -> USD validation          nvidia_usd_validate
+#     -> SimReady baseline       simready-validate      (expected: FAIL)
+#     -> conformance             simready_conform.py
+#     -> SimReady re-validate    simready-validate      (required: PASS)
+#     -> physics smoke           ovphysx, 120 steps
+#
+# Usage:  ./scripts/run_pipeline.sh examples/urdf/arm2.urdf [profile] [version]
+
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+[ -f "$ROOT/.env.ov" ] || { echo "Run ./scripts/bootstrap_env.sh first."; exit 1; }
+# shellcheck disable=SC1091
+source "$ROOT/.env.ov"
+
+SRC="${1:?usage: run_pipeline.sh <asset.urdf|asset.xml> [profile] [version]}"
+PROFILE="${2:-Prop-Robotics-Neutral}"
+PROFILE_VERSION="${3:-1.0.0}"
+
+NAME="$(basename "${SRC%.*}")"
+OUT="$ROOT/.out/$NAME"
+SPECS="$SIMREADY_FOUNDATION_SPEC_ROOT"
+rm -rf "$OUT"; mkdir -p "$OUT"
+
+STAGE=0
+FAILED=0
+stage() { STAGE=$((STAGE+1)); printf '\n\033[1m[%d] %s\033[0m\n' "$STAGE" "$*"; }
+ok()    { printf '    \033[32m✓\033[0m %s\n' "$*"; }
+bad()   { printf '    \033[31m✗\033[0m %s\n' "$*"; FAILED=1; }
+note()  { printf '      %s\n' "$*"; }
+
+sr_validate() {  # $1=asset  $2=json out  -> exit status of simready-validate
+  "$SR_VENV/bin/simready-validate" "$1" \
+      --profile "$PROFILE" --version "$PROFILE_VERSION" \
+      --rules-path    "$SPECS/capabilities" \
+      --features-path "$SPECS/features" \
+      --profiles-path "$SPECS/profiles/profiles.toml" \
+      --output "$2" >"$2.log" 2>&1
+}
+
+feature_summary() {  # $1=json
+  "$SR_VENV/bin/python" - "$1" <<'PY'
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+except Exception as e:
+    print("      (no report: %s)" % e); raise SystemExit
+for asset, r in d.items():
+    for f, v in sorted(r.get("features_summary", {}).items()):
+        mark = "PASS" if v.get("passed") else "FAIL"
+        fails = v.get("failing requirements", "")
+        print("      %-4s %-24s %s" % (mark, f, fails))
+PY
+}
+
+echo "asset   : $SRC"
+echo "profile : $PROFILE v$PROFILE_VERSION"
+echo "output  : $OUT"
+
+# ---------------------------------------------------------------- 1. convert
+stage "Convert to USD"
+case "$SRC" in
+  *.urdf) CONV="$OV_VENV/bin/urdf_usd_converter" ;;
+  *.xml)  CONV="$OV_VENV/bin/mujoco_usd_converter" ;;
+  *.usd|*.usda|*.usdc) CONV="" ;;
+  *) echo "unsupported input: $SRC"; exit 2 ;;
+esac
+
+if [ -n "$CONV" ]; then
+  if "$CONV" "$SRC" "$OUT/converted" >"$OUT/convert.log" 2>&1; then
+    ASSET="$OUT/converted/$NAME.usda"
+    [ -f "$ASSET" ] || ASSET="$(find "$OUT/converted" -maxdepth 1 -name '*.usda' | head -1)"
+    ok "$(basename "$CONV") -> $(find "$OUT/converted" -name '*.usd*' | wc -l) layers"
+    note "$ASSET"
+  else
+    bad "conversion failed — see $OUT/convert.log"; exit 1
+  fi
+else
+  ASSET="$SRC"; ok "using existing USD"
+fi
+
+# --------------------------------------------------------------- 2. USD valid
+stage "USD validation (nvidia_usd_validate)"
+if "$OV_VENV/bin/nvidia_usd_validate" "$ASSET" \
+      --json-output "$OUT/usd-validate.json" >"$OUT/usd-validate.log" 2>&1; then
+  ok "no issues"
+else
+  bad "USD validation failed"
+  grep -E "^ERROR" "$OUT/usd-validate.log" | head -8 | sed 's/^/      /'
+fi
+
+# ---------------------------------------------------------- 3. SimReady before
+stage "SimReady baseline ($PROFILE)"
+sr_validate "$ASSET" "$OUT/simready-before.json"
+BEFORE=$?
+if [ $BEFORE -eq 0 ]; then
+  ok "already conformant"
+else
+  note "not yet conformant (expected for freshly converted assets)"
+  grep -E "^\s+Rule:|^\s+Message:" "$OUT/simready-before.json.log" 2>/dev/null \
+    | head -12 | sed 's/^/    /'
+fi
+feature_summary "$OUT/simready-before.json"
+
+# ------------------------------------------------------------- 4. conformance
+stage "Apply conformance fixes"
+if "$SR_VENV/bin/python" "$ROOT/scripts/simready_conform.py" \
+      "$ASSET" "$OUT/conformed" --name "$NAME" \
+      --profile "$PROFILE" --profile-version "$PROFILE_VERSION" \
+      --report "$OUT/conform.json" >"$OUT/conform.log" 2>&1; then
+  CONFORMED="$OUT/conformed/$NAME/$NAME.usda"
+  ok "wrote $CONFORMED"
+  "$SR_VENV/bin/python" - "$OUT/conform.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))["fixes"]
+for k, v in d.items():
+    if isinstance(v, list): v = ", ".join(v) or "(none)"
+    elif isinstance(v, dict): v = json.dumps(v)[:90]
+    print("      %-26s %s" % (k, v))
+PY
+else
+  bad "conformance step failed — see $OUT/conform.log"; exit 1
+fi
+
+# ----------------------------------------------------------- 5. SimReady after
+stage "SimReady re-validation"
+sr_validate "$CONFORMED" "$OUT/simready-after.json"
+AFTER=$?
+feature_summary "$OUT/simready-after.json"
+if [ $AFTER -eq 0 ]; then
+  ok "[PASSED] $PROFILE v$PROFILE_VERSION"
+else
+  bad "[FAILED] $PROFILE v$PROFILE_VERSION — residual requirements need an agent"
+  grep -E "^\s+Message:" "$OUT/simready-after.json.log" 2>/dev/null | head -8 | sed 's/^/    /'
+fi
+
+# -------------------------------------------------------------- 6. physics
+stage "Physics smoke test (ovphysx, 120 steps)"
+if "$OV_VENV/bin/python" "$ROOT/scripts/sim_check.py" "$CONFORMED" \
+      >"$OUT/sim.log" 2>&1; then
+  ok "$(grep SIMULATED "$OUT/sim.log" | tail -1)"
+else
+  bad "conformed asset no longer simulates — conformance broke dynamics"
+  tail -5 "$OUT/sim.log" | sed 's/^/      /'
+fi
+
+# ------------------------------------------------------------------ summary
+printf '\n\033[1m── summary ──\033[0m\n'
+printf '  SimReady before : %s\n' "$([ $BEFORE -eq 0 ] && echo PASS || echo FAIL)"
+printf '  SimReady after  : %s\n' "$([ $AFTER  -eq 0 ] && echo PASS || echo FAIL)"
+printf '  reports         : %s\n' "$OUT"
+if [ $FAILED -eq 0 ]; then
+  printf '\n\033[32mpipeline OK\033[0m\n'; exit 0
+else
+  printf '\n\033[31mpipeline FAILED\033[0m\n'; exit 1
+fi

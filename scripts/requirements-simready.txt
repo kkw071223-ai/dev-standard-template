@@ -1,0 +1,15 @@
+# SimReady conformance validator — verified 2026-07-25
+#
+# Isolated from .venv-ov on purpose: this stack depends on usd-core, which
+# cannot coexist with usd-exchange's vendored OpenUSD in one interpreter.
+# The NVIDIA skills use the same split, defaulting to
+#   $XDG_CACHE_HOME/physical-ai-skill-hub/simready-validate-venv
+#
+# Spec files (capabilities/, features/, profiles/) are NOT on PyPI — they come
+# from the simready-foundation checkout that bootstrap_env.sh clones.
+
+simready-validate==2026.4.9
+usd-core==26.8
+omniverse-asset-validator==1.18.0
+omniverse-usd-profiles==1.10.22
+numpy==2.4.6

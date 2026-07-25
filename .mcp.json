@@ -1,0 +1,21 @@
+{
+  "_comment": "Omniverse MCP servers from NVIDIA-Omniverse/kit-usd-agents. Inert until the containers are running: export NVIDIA_API_KEY=... && docker compose -f source/mcp/docker-compose.ngc.yaml up. See docs/04-mcp-setup.md.",
+  "mcpServers": {
+    "omni-ui-mcp": {
+      "type": "http",
+      "url": "http://localhost:9901/mcp"
+    },
+    "kit-mcp": {
+      "type": "http",
+      "url": "http://localhost:9902/mcp"
+    },
+    "usd-code-mcp": {
+      "type": "http",
+      "url": "http://localhost:9903/mcp"
+    },
+    "isaacsim-mcp": {
+      "type": "http",
+      "url": "http://localhost:9904/mcp"
+    }
+  }
+}

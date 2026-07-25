@@ -1,0 +1,15 @@
+# generated environments
+.venv-ov/
+.venv-simready/
+.env.ov
+
+# pipeline output
+.out/
+
+# installed skills (re-add with: npx skills add nvidia/skills ...)
+.claude/skills/
+
+# caches
+__pycache__/
+*.py[cod]
+.cache/
