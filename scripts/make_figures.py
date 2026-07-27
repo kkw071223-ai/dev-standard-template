@@ -107,6 +107,16 @@ def _tessellate(prim):
         p = np.array([[-w, -l, 0], [w, -l, 0], [w, l, 0], [-w, l, 0]], float)
         return p, [[0, 1, 2, 3]]
 
+    if t == "Mesh":
+        pts = prim.GetAttribute("points").Get()
+        counts = prim.GetAttribute("faceVertexCounts").Get()
+        idx = prim.GetAttribute("faceVertexIndices").Get()
+        if pts and counts and idx:
+            faces, k = [], 0
+            for c in counts:
+                faces.append([int(i) for i in idx[k:k + c]]); k += c
+            return np.array(pts, float), faces
+
     if t == "BasisCurves":
         pts = prim.GetAttribute("points").Get()
         if pts:
@@ -370,6 +380,121 @@ def fig_layers(converted: Path, conformed: Path, out: Path):
     print(f"  {out.name}")
 
 
+def fig_drawing(dxf: Path, asset: Path, report: Path, out: Path):
+    """2D DXF profile beside the solid it was extruded into."""
+    import json
+    import ezdxf
+    from pxr import Usd
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+
+    rep = json.loads(report.read_text())
+    doc = ezdxf.readfile(str(dxf))
+    msp = doc.modelspace()
+    scale = rep["unit_scale_to_m"]
+
+    fig = plt.figure(figsize=(12.4, 4.3))
+
+    # ── left: the drawing as drafted
+    ax = fig.add_subplot(1, 3, 1)
+    kinds = {}
+    for e in msp:
+        t = e.dxftype()
+        kinds[t] = kinds.get(t, 0) + 1
+        col, lw = (BLUE, 1.6) if e.dxf.layer == "PROFILE" else \
+                  (RED, 1.3) if e.dxf.layer == "HOLES" else (MUTED, 0.7)
+        if t == "LWPOLYLINE":
+            # expand bulges with the converter's own routine, so the drawing is
+            # shown with the arcs it actually specifies (fillets, slot ends)
+            import sys as _sys
+            _sys.path.insert(0, "scripts")
+            from drawing_to_usd import _bulge_points
+            raw = list(e.get_points("xyb"))
+            pl = []
+            for i, (x, y, b) in enumerate(raw):
+                nx, ny, _ = raw[(i + 1) % len(raw)]
+                pl.append([x, y])
+                if abs(b) > 1e-12:
+                    pl.extend(_bulge_points((x, y), (nx, ny), b, 4.0)[1:])
+            p = np.asarray(pl, float)
+            p = np.vstack([p, p[:1]])
+            ax.plot(p[:, 0], p[:, 1], color=col, lw=lw)
+        elif t == "CIRCLE":
+            a = np.linspace(0, 2 * np.pi, 64)
+            c, r = e.dxf.center, e.dxf.radius
+            ax.plot(c.x + r * np.cos(a), c.y + r * np.sin(a), color=col, lw=lw)
+        elif t == "TEXT":
+            ax.text(e.dxf.insert.x, e.dxf.insert.y + 4, e.dxf.text, fontsize=5.8,
+                    color=MUTED, family="monospace", clip_on=True)
+    ax.set_aspect("equal"); ax.grid(alpha=0.3)
+    ax.set_xlabel("X (mm)"); ax.set_ylabel("Y (mm)")
+    ax.set_title("1 · DXF drawing as drafted", fontsize=10, pad=10)
+    ax.text(0.5, -0.30, "  ".join(f"{k} x{v}" for k, v in sorted(kinds.items())),
+            transform=ax.transAxes, fontsize=6.4, color=MUTED, ha="center")
+
+    # ── middle: how the converter classified those loops
+    # Re-run the converter's own extraction so the panel shows its real decision:
+    # which loop became the boundary and which became holes. Nesting is what
+    # decides material from void, and it is the step with nothing to see in the
+    # input or the output.
+    import sys as _sys
+    _sys.path.insert(0, "scripts")
+    from drawing_to_usd import extract_loops, classify
+
+    ax = fig.add_subplot(1, 3, 2)
+    loops, _ = extract_loops(msp, None, rep["arc_segment_deg"]
+                             if "arc_segment_deg" in rep else 6.0)
+    outer, holes, _ = classify(loops)
+    if outer is not None:
+        p = np.vstack([outer, outer[:1]])
+        ax.fill(p[:, 0], p[:, 1], color=BLUE, alpha=0.17)
+        ax.plot(p[:, 0], p[:, 1], color=BLUE, lw=1.8, label="boundary (material)")
+        for i, h in enumerate(holes):
+            q = np.vstack([h, h[:1]])
+            ax.fill(q[:, 0], q[:, 1], color="white", alpha=1.0, zorder=2)
+            ax.plot(q[:, 0], q[:, 1], color=RED, lw=1.4, zorder=3,
+                    label="holes (void)" if i == 0 else None)
+    ax.set_aspect("equal"); ax.grid(alpha=0.3)
+    ax.set_xlabel("X (mm)"); ax.set_ylabel("Y (mm)")
+    ax.set_title("2 · boundary vs holes, resolved", fontsize=10, pad=10)
+    ax.legend(fontsize=6.6, loc="upper center", bbox_to_anchor=(0.5, -0.20),
+              ncol=2, frameon=False)
+
+    # ── right: the extruded solid
+    ax = fig.add_subplot(1, 3, 3, projection="3d")
+    stage = Usd.Stage.Open(str(asset))
+    prims = _gprims(stage)
+    for _, t, purpose, w, faces in prims:
+        if t != "Mesh":
+            continue
+        polys = [[w[j] for j in f if j < len(w)] for f in faces]
+        polys = [p for p in polys if len(p) >= 3]
+        ax.add_collection3d(Poly3DCollection(polys, alpha=0.55, facecolor=BLUE,
+                                             edgecolor=BLUE, linewidths=0.15))
+        P = w
+        ctr = (P.min(axis=0) + P.max(axis=0)) / 2
+        rad = max(float((P.max(axis=0) - P.min(axis=0)).max()) / 2, 1e-3) * 0.62
+        ax.set_xlim(ctr[0] - rad, ctr[0] + rad)
+        ax.set_ylim(ctr[1] - rad, ctr[1] + rad)
+        ax.set_zlim(ctr[2] - rad, ctr[2] + rad)
+    ax.set_xlabel("X (m)", fontsize=7.5); ax.set_ylabel("Y (m)", fontsize=7.5)
+    ax.set_zlabel("Z (m)", fontsize=7.5)
+    ax.tick_params(labelsize=6.2)
+    ax.view_init(elev=26, azim=-58)
+    ax.set_title(f"3 · extruded solid — {rep['thickness_m']*1000:.0f} mm", fontsize=10)
+
+    fig.suptitle("2D drawing to simulatable solid — verified end to end",
+                 fontweight="bold", y=0.985)
+    fig.text(0.5, 0.015,
+             f"{rep['points']} points · {rep['faces']} faces · watertight · "
+             f"{rep['volume_m3']*1e6:.1f} cm3 · {rep['mass_kg']:.3f} kg at "
+             f"{rep['density_kg_m3']:.0f} kg/m3 · "
+             f"then [PASSED] Prop-Static-Neutral and simulated 120 steps",
+             ha="center", fontsize=7.4, color=MUTED)
+    fig.subplots_adjust(top=0.80, bottom=0.21, wspace=0.30)
+    fig.savefig(out, bbox_inches=None); plt.close(fig)
+    print(f"  {out.name}")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -409,6 +534,12 @@ def main() -> int:
 
     if arm_conf.exists():
         fig_layers(arm_conv, arm_conf, outdir / "layers-np005.png")
+
+    dxf = Path("examples/drawing/bracket.dxf")
+    brep = root / "bracket/drawing.json"
+    basset = root / "bracket/converted/bracket.usdc"
+    if dxf.exists() and brep.exists() and basset.exists():
+        fig_drawing(dxf, basset, brep, outdir / "drawing-to-solid.png")
 
     print("done")
     return 0

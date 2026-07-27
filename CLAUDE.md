@@ -18,6 +18,7 @@ with plausible-looking alternatives.
 | Sim2Real / Real2Sim work | [`docs/03-sim2real-real2sim.md`](docs/03-sim2real-real2sim.md) |
 | MCP / Kit / Isaac code | [`docs/04-mcp-setup.md`](docs/04-mcp-setup.md) |
 | planning work | [`docs/05-adoption-roadmap.md`](docs/05-adoption-roadmap.md) |
+| 2D drawing / DXF work | [`docs/06-drawing-to-simready.md`](docs/06-drawing-to-simready.md) |
 
 ---
 
@@ -55,8 +56,19 @@ The pipeline is the contract: convert → USD-validate → SimReady baseline →
 SimReady re-validate → 120-step physics smoke. It exits non-zero if any stage regresses.
 Reports land in `.out/<asset>/*.json`.
 
-Both bundled fixtures reach `[PASSED] Prop-Robotics-Neutral v1.0.0`, 6/6 features.
-**If either stops passing, you broke something** — that is the regression signal.
+Three fixtures must keep passing — **if any stops, you broke something**:
+
+| fixture | profile | features |
+|---|---|---|
+| `examples/urdf/arm2.urdf` | `Prop-Robotics-Neutral` | 6/6 |
+| `examples/mujoco/cartpole.xml` | `Prop-Robotics-Neutral` | 6/6 |
+| `examples/drawing/bracket.dxf` | `Prop-Static-Neutral` | 5/5 |
+
+The DXF fixture also has unit tests for its geometry invariants:
+
+```bash
+.venv-ov/bin/python scripts/test_drawing_to_usd.py     # watertight + winding + volume
+```
 
 ---
 
@@ -111,13 +123,23 @@ conformance change as done without it passing.
 | PMT.001 | bind `material:binding:physics` on every collider | `bind_physics_materials` |
 | VM.MAT.001 | bind a `UsdPreviewSurface` on every renderable GPrim | `bind_visual_materials` |
 
-Two subtleties worth preserving:
+Subtleties worth preserving:
 
 - **RB.006** — the validator clears a prim only when *that prim itself* carries the
   reset. An ancestor's reset does not cover descendants. Do not reintroduce the
   early-`break` walk-up; it silently leaves the deepest body failing.
 - **GSP.001** — the grasp curve is authored with `purpose = guide` so it is exempt from
   `VM.MAT.001`. Changing its purpose creates a circular requirement.
+- **Extrusion winding** — boundary and holes are normalised (CCW / CW) and then *one*
+  wall formula serves both. Flipping holes again in the wall loop double-reverses them;
+  the mesh still looks right and `ManifoldChecker` reports it only as a warning — which
+  still exits 1. `test_drawing_to_usd.py` guards this.
+- **Container format** — `simready-validate` accepts only `.usd`/`.usda` and returns an
+  empty `{}` report for `.usdc`; `nvidia_usd_validate` fails a `.usda` holding large
+  arrays. `.usd` (crate) satisfies both, which is why `--format auto` exists.
+- **Single-body parts** — every stock `Prop-*` profile requires `FET004`/`RB.MB.001`
+  ("at least two rigid bodies"), so an extruded part uses `Prop-Static-Neutral` from
+  `profiles/prop-static.toml`. Do not fabricate a second rigid body to satisfy it.
 
 ---
 

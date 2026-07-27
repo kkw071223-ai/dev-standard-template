@@ -16,6 +16,7 @@ not summarized from documentation.
 | **Catalog** | Every Omniverse-related agent, skill, MCP server and library, counted and named — [`docs/01-catalog.md`](docs/01-catalog.md) |
 | **Evidence** | What actually ran, with real inputs/outputs and the traps that bite — [`docs/02-verified-findings.md`](docs/02-verified-findings.md) |
 | **Sim2Real / Real2Sim** | How the pieces compose into closed loops — [`docs/03-sim2real-real2sim.md`](docs/03-sim2real-real2sim.md) |
+| **2D drawing → SimReady** | DXF to a validated, simulatable solid in one command — [`docs/06-drawing-to-simready.md`](docs/06-drawing-to-simready.md) |
 | **MCP setup** | The 4 Omniverse MCP servers, ports, tools, client config — [`docs/04-mcp-setup.md`](docs/04-mcp-setup.md) |
 | **Adoption** | A staged plan to get from zero to agent-run pipelines — [`docs/05-adoption-roadmap.md`](docs/05-adoption-roadmap.md) |
 | **Working code** | A conformance agent that takes a converted robot from *failing* to *SimReady PASS* — [`scripts/`](scripts/) |
@@ -48,6 +49,13 @@ The same pipeline on a MuJoCo cartpole also reaches 6/6 — after adding one mor
 (`VM.MAT.001`), because the MuJoCo converter omits visual materials the URDF converter
 emits. Different converters fail different requirements; test more than one.
 
+A **2D DXF drawing** enters the same pipeline and reaches `[PASSED]` too. No NVIDIA skill
+covers 2D → 3D, so [`scripts/drawing_to_usd.py`](scripts/drawing_to_usd.py) extrudes a
+closed profile into a watertight solid with mass and colliders; everything downstream is
+unchanged. It handles prismatic parts — plates, brackets, gaskets — and explicitly does
+**not** reconstruct a solid from three orthographic views. See
+[`docs/06-drawing-to-simready.md`](docs/06-drawing-to-simready.md).
+
 The gap between "converted" and "simulation-ready" is a handful of **specific,
 machine-readable requirement codes**. That gap is the work an agent can own — and every
 code you teach the fixer moves permanently out of the model's column. See
@@ -61,8 +69,10 @@ code you teach the fixer moves permanently out of the model's column. See
 # 1. Build the verified CPU environment (~3 min, no GPU needed)
 ./scripts/bootstrap_env.sh
 
-# 2. Run the whole pipeline on the bundled robot
+# 2. Run the whole pipeline — a robot, a MuJoCo scene, or a 2D drawing
 ./scripts/run_pipeline.sh examples/urdf/arm2.urdf
+./scripts/run_pipeline.sh examples/mujoco/cartpole.xml
+./scripts/run_pipeline.sh examples/drawing/bracket.dxf
 
 # 3. Install the Omniverse agent skills into this repo
 npx skills add nvidia/skills \
@@ -132,7 +142,8 @@ CPU runners.** Only reconstruction, rendering and large-scale RL need GPUs.
 ## Layout
 
 ```
-docs/               analysis and setup guides (5 documents)
+docs/               analysis and setup guides (6 documents)
+profiles/           local SimReady profiles (Prop-Static-Neutral for single-body parts)
 docs/report.html    illustrated beginner-facing report (self-contained)
 docs/reference.html per-item reference: role, inputs, outputs (self-contained)
 docs/base.css       design system shared by both pages

@@ -1,0 +1,41 @@
+# Local SimReady profile for single-body props.
+#
+# Why this exists
+# ---------------
+# Every stock `Prop-*` profile includes FET004 (Simulate Multi-Body Physics),
+# whose RB.MB.001 requires "at least two physics rigid bodies". A part extruded
+# from a 2D drawing — a plate, bracket, gasket, shim — has exactly one, so it can
+# never satisfy those profiles no matter how correct it is.
+#
+# NVIDIA's own profiles.toml marks FET004 as optional in a comment:
+#
+#     {"FET004_BASE_NEUTRAL" = {version = "0.1.0"}},  # "... (This is an optional
+#                                                     #  feature for this profile)"
+#
+# but nothing encodes that. The feature JSON has only id/version/display_name/
+# path/dependencies/requirements — no optional flag — so `simready-validate`
+# enforces it like any other. The comment states an intent the format cannot
+# express, and tooling cannot honour intent it cannot read.
+#
+# So this file spells the intent out in a form the validator does read. It is
+# the stock Prop-Robotics-Neutral minus FET004, and nothing else.
+#
+# Usage
+# -----
+#   simready-validate part.usd --profile Prop-Static-Neutral --version 1.0.0 \
+#     --rules-path    $SPECS/capabilities \
+#     --features-path $SPECS/features \
+#     --profiles-path $SPECS/profiles/profiles.toml \
+#     --profiles-path profiles/prop-static.toml
+#
+# `--profiles-path` is repeatable, so this adds to the stock set rather than
+# replacing it. Use the stock profiles for anything with joints.
+
+[Prop-Static-Neutral]
+"1.0.0" = {features = [
+    {"FET000_CORE"         = {version = "0.1.0"}},  # naming, metadata, packaging
+    {"FET001_BASE_NEUTRAL" = {version = "0.1.0"}},  # units, up-axis, geometry basics
+    {"FET003_BASE_NEUTRAL" = {version = "0.1.0"}},  # rigid body + collider
+    {"FET005_BASE_NEUTRAL" = {version = "0.1.0"}},  # grasp vector + physics material
+    {"FET006_BASE_MDL"     = {version = "0.1.0"}},  # visual materials
+]}

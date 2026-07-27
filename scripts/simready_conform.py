@@ -208,15 +208,14 @@ def main() -> int:
     ap.add_argument("--name", default=None, help="asset name (default: input stem)")
     ap.add_argument("--profile", default="Prop-Robotics-Neutral")
     ap.add_argument("--profile-version", default="1.0.0")
+    ap.add_argument("--format", choices=["auto", "usda", "usd"], default="auto",
+                    help="output container. 'auto' writes crate-backed .usd when the "
+                         "stage holds large arrays, .usda otherwise")
     ap.add_argument("--report", default=None, help="write JSON change report here")
     args = ap.parse_args()
 
     src = Path(args.input).resolve()
     name = args.name or src.stem
-    # NP.005 wants asset_folder/intermediate_folder/asset.usda
-    asset_dir = Path(args.outdir).resolve() / name
-    asset_dir.mkdir(parents=True, exist_ok=True)
-    dst = asset_dir / f"{name}.usda"
 
     stage = Usd.Stage.Open(str(src))
     if not stage:
@@ -226,6 +225,28 @@ def main() -> int:
     # NP.005 — flatten the payload/sublayer tree into one layer
     flat = stage.Flatten()
     out_stage = Usd.Stage.Open(flat)
+
+    # Container choice is forced by two validators wanting opposite things:
+    #   nvidia_usd_validate   fails a .usda holding large arrays
+    #                         (UsdAsciiPerformanceChecker)
+    #   simready-validate     only accepts .usd / .usda — it ignores .usdc
+    #                         outright (api.py: suffix not in [".usd", ".usda"])
+    # `.usd` satisfies both: the extension is accepted, and USD writes it as
+    # crate, so the arrays are never ASCII. Plain props stay .usda so they remain
+    # readable in a text editor.
+    ext = args.format
+    if ext == "auto":
+        big = any(
+            len(v) > 1000
+            for p in out_stage.Traverse() for a in p.GetAttributes()
+            if a.GetTypeName().isArray and (v := a.Get()) is not None
+        )
+        ext = "usd" if big else "usda"
+
+    # NP.005 wants asset_folder/intermediate_folder/asset.<ext>
+    asset_dir = Path(args.outdir).resolve() / name
+    asset_dir.mkdir(parents=True, exist_ok=True)
+    dst = asset_dir / f"{name}.{ext}"
 
     report = {"input": str(src), "output": str(dst), "fixes": {}}
 

@@ -10,7 +10,15 @@
 #     -> SimReady re-validate    simready-validate      (required: PASS)
 #     -> physics smoke           ovphysx, 120 steps
 #
+# 2D drawings enter the same pipeline through scripts/drawing_to_usd.py, which
+# extrudes a closed DXF profile into a solid. A single extruded part has one
+# rigid body, so it cannot satisfy any stock Prop-* profile (they all require
+# FET004 / RB.MB.001, "at least two rigid bodies") — it defaults to the local
+# Prop-Static-Neutral instead. See profiles/prop-static.toml.
+#
 # Usage:  ./scripts/run_pipeline.sh examples/urdf/arm2.urdf [profile] [version]
+#         ./scripts/run_pipeline.sh examples/drawing/bracket.dxf
+#         DXF_THICKNESS=0.012 ./scripts/run_pipeline.sh part.dxf
 
 set -uo pipefail
 
@@ -21,9 +29,15 @@ cd "$ROOT"
 # shellcheck disable=SC1091
 source "$ROOT/.env.ov"
 
-SRC="${1:?usage: run_pipeline.sh <asset.urdf|asset.xml> [profile] [version]}"
-PROFILE="${2:-Prop-Robotics-Neutral}"
+SRC="${1:?usage: run_pipeline.sh <asset.urdf|asset.xml|asset.dxf> [profile] [version]}"
+case "$SRC" in
+  *.dxf) DEFAULT_PROFILE="Prop-Static-Neutral" ;;
+  *)     DEFAULT_PROFILE="Prop-Robotics-Neutral" ;;
+esac
+PROFILE="${2:-$DEFAULT_PROFILE}"
 PROFILE_VERSION="${3:-1.0.0}"
+DXF_THICKNESS="${DXF_THICKNESS:-0.012}"
+DXF_DENSITY="${DXF_DENSITY:-7850}"
 
 NAME="$(basename "${SRC%.*}")"
 OUT="$ROOT/.out/$NAME"
@@ -38,11 +52,16 @@ bad()   { printf '    \033[31m✗\033[0m %s\n' "$*"; FAILED=1; }
 note()  { printf '      %s\n' "$*"; }
 
 sr_validate() {  # $1=asset  $2=json out  -> exit status of simready-validate
+  # --profiles-path is repeatable; the local file adds profiles without
+  # shadowing the stock set.
+  local extra=()
+  [ -f "$ROOT/profiles/prop-static.toml" ] && extra=(--profiles-path "$ROOT/profiles/prop-static.toml")
   "$SR_VENV/bin/simready-validate" "$1" \
       --profile "$PROFILE" --version "$PROFILE_VERSION" \
       --rules-path    "$SPECS/capabilities" \
       --features-path "$SPECS/features" \
       --profiles-path "$SPECS/profiles/profiles.toml" \
+      "${extra[@]}" \
       --output "$2" >"$2.log" 2>&1
 }
 
@@ -67,14 +86,34 @@ echo "output  : $OUT"
 
 # ---------------------------------------------------------------- 1. convert
 stage "Convert to USD"
+CONV=""; DRAWING=0
 case "$SRC" in
   *.urdf) CONV="$OV_VENV/bin/urdf_usd_converter" ;;
   *.xml)  CONV="$OV_VENV/bin/mujoco_usd_converter" ;;
-  *.usd|*.usda|*.usdc) CONV="" ;;
+  *.dxf)  DRAWING=1 ;;
+  *.usd|*.usda|*.usdc) ;;
   *) echo "unsupported input: $SRC"; exit 2 ;;
 esac
 
-if [ -n "$CONV" ]; then
+if [ "$DRAWING" = 1 ]; then
+  if "$OV_VENV/bin/python" "$ROOT/scripts/drawing_to_usd.py" "$SRC" "$OUT/converted" \
+        --name "$NAME" --thickness "$DXF_THICKNESS" --density "$DXF_DENSITY" \
+        --report "$OUT/drawing.json" >"$OUT/convert.log" 2>&1; then
+    ASSET="$OUT/converted/$NAME.usdc"
+    ok "drawing_to_usd -> extruded solid (${DXF_THICKNESS} m thick)"
+    "$OV_VENV/bin/python" - "$OUT/drawing.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+print("      units %s (x%g to m) · %d loops, %d holes"
+      % (d["units"], d["unit_scale_to_m"], d["loops"], d["holes"]))
+print("      %d points / %d faces · %.1f cm3 · %.3f kg"
+      % (d["points"], d["faces"], d["volume_m3"] * 1e6, d["mass_kg"]))
+PY
+  else
+    bad "drawing conversion failed — see $OUT/convert.log"
+    tail -5 "$OUT/convert.log" | sed 's/^/      /'; exit 1
+  fi
+elif [ -n "$CONV" ]; then
   if "$CONV" "$SRC" "$OUT/converted" >"$OUT/convert.log" 2>&1; then
     ASSET="$OUT/converted/$NAME.usda"
     [ -f "$ASSET" ] || ASSET="$(find "$OUT/converted" -maxdepth 1 -name '*.usda' | head -1)"
@@ -116,7 +155,11 @@ if "$SR_VENV/bin/python" "$ROOT/scripts/simready_conform.py" \
       "$ASSET" "$OUT/conformed" --name "$NAME" \
       --profile "$PROFILE" --profile-version "$PROFILE_VERSION" \
       --report "$OUT/conform.json" >"$OUT/conform.log" 2>&1; then
-  CONFORMED="$OUT/conformed/$NAME/$NAME.usda"
+  # the container is chosen by simready_conform (.usd for mesh-heavy stages,
+  # .usda otherwise), so read the path it reports rather than assuming
+  CONFORMED="$("$SR_VENV/bin/python" -c "
+import json,sys; print(json.load(open(sys.argv[1]))['fixes']['NP.005_flattened_to'])
+" "$OUT/conform.json")"
   ok "wrote $CONFORMED"
   "$SR_VENV/bin/python" - "$OUT/conform.json" <<'PY'
 import json, sys

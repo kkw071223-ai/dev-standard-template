@@ -543,6 +543,131 @@ out/arm2/Payload/Physics.usda         <span class="d">← 총 40 KB</span></pre>
   </div>
 </section>
 
+<!-- ══════════════════════════════════════════════ 4b. 2D 도면 -->
+<section>
+  <div class="wrap">
+    <div class="s-head"><span class="n">04b</span><h2>2D 도면도 같은 파이프라인에 넣을 수 있나</h2></div>
+    <div class="col">
+      <p>
+        됩니다. 다만 먼저 정직하게 짚을 것이 있습니다 —
+        <strong>NVIDIA 스킬 중에 2D를 3D로 바꾸는 것은 없습니다.</strong>
+        <code>usd-convert-cad</code>는 STEP·JT·DGN 같은 <b>3D</b> CAD만 다룹니다.
+        147개 스킬을 다 뒤져도 도면에서 입체를 만드는 것은 없습니다.
+      </p>
+      <p>
+        그래서 그 한 단계만 직접 만들었습니다. 나머지는 앞에서 검증한 파이프라인이
+        그대로 이어집니다.
+      </p>
+    </div>
+
+    <figure>
+      <img src="{{FIG:drawing-to-solid}}" alt="DXF 도면, 경계와 구멍 분류, 압출된 3D 솔리드 3단계">
+      <figcaption>
+        <b>DXF 도면 → 입체.</b> 왼쪽은 도면 원본(치수선과 문자 주기 포함 — 무시됩니다),
+        가운데는 컨버터가 <b>재료</b>와 <b>구멍</b>을 판정한 결과,
+        오른쪽은 12 mm로 압출한 솔리드. 이후 SimReady 통과 + 120스텝 시뮬레이션까지 확인했습니다.
+      </figcaption>
+    </figure>
+
+    <div class="term">
+      <div class="term-bar"><span class="dot"></span>명령 하나로 도면 → 시뮬레이션 가능 자산</div>
+<pre><span class="d">$</span> <span class="c">./scripts/run_pipeline.sh examples/drawing/bracket.dxf</span>
+
+[1] Convert to USD          <span class="g">✓</span> drawing_to_usd -> extruded solid (0.012 m thick)
+                              units mm (x0.001 to m) · 6 loops, 5 holes
+                              732 points / 1114 faces · 159.0 cm3 · 1.248 kg
+[2] USD validation          <span class="g">✓</span> no issues
+[3] SimReady baseline       <span class="r">FAIL</span>
+[4] Apply conformance fixes <span class="g">✓</span> flatten + 4 fixes
+[5] SimReady re-validation  <span class="g">✓</span> <span class="g">[PASSED]</span> Prop-Static-Neutral v1.0.0
+[6] Physics smoke test      <span class="g">✓</span> SIMULATED 120 steps OK
+
+<span class="g">pipeline OK</span></pre>
+    </div>
+
+    <div class="col">
+      <div class="note warn">
+        <span class="lbl">되는 것과 안 되는 것 — 이게 제일 중요합니다</span>
+        <b>됩니다:</b> 닫힌 윤곽 하나를 일정 두께로 밀어낸 부품 —
+        판재, 브래킷, 개스킷, 레이저·워터젯 절단물, 판금 전개도.
+        필렛·원호·슬롯·구멍 개수 제한 없습니다.
+        <br><br>
+        <b>안 됩니다:</b> <b>정면도·평면도·측면도 3개를 보고 입체를 복원하는 것.</b>
+        이건 아직 연구 주제이지 옵션으로 해결되는 게 아닙니다.
+        회전체(선반 가공물)·스윕·로프트, 두께가 변하는 부품,
+        한 도면에 여러 부품이 있는 경우도 안 됩니다.
+        <br><br>
+        후자라면 이 도구는 맞지 않습니다. CAD에서 입체를 만든 뒤
+        <code>usd-convert-cad</code>로 가져오는 게 정직한 답입니다.
+      </div>
+
+      <h3>단위가 가장 흔한 사고 지점입니다</h3>
+      <p>
+        CAD 도면은 거의 항상 mm이고, USD 스테이지는 m입니다. 이걸 놓치면
+        <strong>1000배 큰 부품</strong>이 생기는데, 검증기는 전부 통과하고
+        물리만 이상하게 굽니다. 그래서 <code>$INSUNITS</code>에서 단위를 읽어
+        <b>매번 출력</b>하도록 했습니다. 단위 표기가 없는 도면이면 mm로 가정하고
+        경고를 띄웁니다.
+      </p>
+      <p>
+        질량도 형상에서 계산합니다 — 윤곽 면적에서 구멍을 빼고 두께를 곱한 부피에
+        밀도를 곱합니다. 예제 브래킷은 159.0 cm³ · 1.248 kg(강철)로,
+        손으로 계산한 값과 맞습니다. 질량이 맞아야 부품이 <b>제대로 떨어집니다</b>.
+      </p>
+
+      <h3>부딪힌 제약 두 가지</h3>
+      <p>
+        만들면서 발견한 것인데, 어디에도 잘 안 적혀 있습니다.
+        <strong>두 검증기가 서로 반대되는 파일 형식을 요구합니다.</strong>
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>검증기</th><th>요구</th><th>근거</th></tr></thead>
+          <tbody>
+            <tr><td><code>simready-validate</code></td>
+                <td><code>.usdc</code>를 <b>아예 무시</b> — 빈 리포트 <code>{}</code></td>
+                <td><code>api.py:396</code>에 <code>.usd</code>/<code>.usda</code>만 허용</td></tr>
+            <tr><td><code>nvidia_usd_validate</code></td>
+                <td>대용량 배열이 든 <code>.usda</code>를 <b>거부</b></td>
+                <td><code>UsdAsciiPerformanceChecker</code></td></tr>
+            <tr><td colspan="3"><b>해결:</b> <code>.usd</code> — 확장자는 허용 목록에 있고,
+                USD가 크레이트(바이너리)로 씁니다. 양쪽 다 통과합니다.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>단일 부품은 표준 프로파일을 통과할 수 없습니다</h3>
+      <p>
+        모든 기본 <code>Prop-*</code> 프로파일이 <code>FET004</code>(다물체 물리)를 포함하고,
+        그 안의 <code>RB.MB.001</code>은 <b>"강체가 최소 2개"</b>를 요구합니다.
+        판재 한 장은 1개뿐이라 <b>아무리 정확해도 통과가 불가능합니다.</b>
+      </p>
+      <p>
+        NVIDIA도 이 기능을 "선택 사항"이라고 <b>주석으로만</b> 적어뒀습니다 —
+        기능 정의 JSON에는 optional 플래그 자체가 없어서 검증기는 다른 요구사항과
+        똑같이 강제합니다. <b>형식이 표현하지 못하는 의도는 도구가 지킬 수 없습니다.</b>
+      </p>
+      <div class="note pass">
+        <span class="lbl">해결 — 문서화된 확장 방식으로</span>
+        <code>profiles/prop-static.toml</code>에 기본 프로파일에서 <code>FET004</code>만 뺀
+        <code>Prop-Static-Neutral</code>을 정의했습니다. <code>--profiles-path</code>는
+        반복 지정이 가능해서 기본 프로파일을 <b>덮어쓰지 않고 추가</b>됩니다.
+        <code>simready-foundation-add-profile</code> 스킬이 존재하는 이유가 바로 이런 경우입니다.
+        관절이 있는 자산에는 기본 프로파일을 그대로 쓰세요.
+      </div>
+
+      <h3>도면 형식이 DXF가 아니라면</h3>
+      <p>
+        DXF가 기반이고, 나머지는 앞단에서 변환해 붙입니다(아래는 미구현 — 경로만 안내):
+        <b>DWG</b>는 ODAFileConverter로, <b>벡터 PDF</b>는 pdf2dxf나 Inkscape로,
+        <b>스캔 이미지</b>는 먼저 벡터화(potrace 등)해야 합니다.
+        다만 벡터화 결과는 윤곽이 닫혀 있지 않은 경우가 많아 손질이 필요합니다 —
+        이 컨버터는 <b>닫힌 윤곽만</b> 처리합니다.
+      </p>
+    </div>
+  </div>
+</section>
+
 <!-- ══════════════════════════════════════════════ 5. 함정 -->
 <section>
   <div class="wrap">
