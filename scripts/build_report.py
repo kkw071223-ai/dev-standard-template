@@ -2,14 +2,17 @@
 """
 build_report.py — assemble the standalone HTML report.
 
-Reads the report body from docs/report.body.html and inlines every figure in
-docs/figures/*.webp as a data URI, so the output is fully self-contained (no
-external requests, which an Artifact CSP would block anyway).
+Reads a page body from docs/*.body.html and inlines everything it references, so
+the output is fully self-contained (no external requests, which an Artifact CSP
+would block anyway).
 
-Placeholders in the body: {{FIG:robot-arm2}} -> the data URI for that figure.
+Placeholders in the body:
+    {{FIG:robot-arm2}}   -> data URI for docs/figures/robot-arm2.webp
+    {{CSS:base}}         -> contents of docs/base.css, so pages share one system
 
 Usage:
     python build_report.py --body docs/report.body.html --out docs/report.html
+    python build_report.py --body docs/reference.body.html --out docs/reference.html
 """
 
 from __future__ import annotations
@@ -28,8 +31,18 @@ def main() -> int:
     ap.add_argument("--out", default="docs/report.html")
     args = ap.parse_args()
 
-    body = Path(args.body).read_text(encoding="utf-8")
+    body_path = Path(args.body)
+    body = body_path.read_text(encoding="utf-8")
     figdir = Path(args.figures)
+
+    # {{CSS:name}} -> docs/name.css, so every page shares one design system
+    def css(m):
+        p = body_path.parent / f"{m.group(1)}.css"
+        if not p.exists():
+            raise SystemExit(f"ERROR: missing stylesheet {p}")
+        return p.read_text(encoding="utf-8")
+
+    body = re.sub(r"\{\{CSS:([a-zA-Z0-9_-]+)\}\}", css, body)
 
     uris = {}
     for p in sorted(figdir.glob("*.webp")):

@@ -214,6 +214,53 @@
   @media (prefers-reduced-motion: no-preference) {
     a, .step-n { transition: color .15s ease, background-color .15s ease; }
   }
+
+  /* ─────────────────────────────────────────── reference-page components */
+  /* An entry = one skill / tool / library, with its role and its I/O contract. */
+  .items { display: grid; gap: 14px; margin: 1.7em 0; }
+  .item { background: var(--card); border: 1px solid var(--rule); border-radius: 6px;
+          padding: 15px 18px; }
+  .item > header { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: baseline;
+                   margin-bottom: .55em; }
+  .item .nm { font-family: var(--mono); font-size: .895rem; font-weight: 700; color: var(--ink);
+              overflow-wrap: anywhere; }
+  .item .role { font-family: var(--display); font-size: .885rem; line-height: 1.5;
+                color: var(--ink-soft); margin: 0 0 .5em; }
+  .item .role b { color: var(--ink); font-weight: 650; }
+
+  /* input → output, the part that was missing */
+  .io { display: grid; grid-template-columns: 62px 1fr; gap: 4px 12px; margin-top: .7em;
+        font-family: var(--display); font-size: .825rem; line-height: 1.5; }
+  .io dt { font-family: var(--mono); font-size: .715rem; font-weight: 700; letter-spacing: .04em;
+           text-transform: uppercase; color: var(--muted); padding-top: .18em; }
+  .io dd { margin: 0; color: var(--ink-soft); }
+  .io dd code { font-size: .9em; }
+  .io .in  { color: var(--accent-ink); }
+  .io .out { color: var(--pass); }
+
+  .cmd { font-family: var(--mono); font-size: .765rem; line-height: 1.55; background: var(--term-bg);
+         color: var(--term-ink); padding: 9px 12px; border-radius: 4px; margin-top: .75em;
+         overflow-x: auto; white-space: pre; }
+  .cmd .d { color: var(--term-dim); }
+  .cmd .g { color: var(--term-green); }
+
+  .badges { display: flex; flex-wrap: wrap; gap: 5px; margin-left: auto; }
+
+  /* dense group listing for families too large to card individually */
+  .fam { margin: 1.4em 0; }
+  .fam h4 { margin: 1.35em 0 .3em; }
+  .fam .names { font-family: var(--mono); font-size: .78rem; line-height: 1.95;
+                color: var(--ink-soft); overflow-wrap: anywhere; }
+  .fam .names b { color: var(--accent-ink); font-weight: 600; }
+
+  nav.toc { background: var(--card); border: 1px solid var(--rule); border-radius: 6px;
+            padding: 16px 20px; margin: 2em 0 0; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 30px;
+               font-family: var(--display); font-size: .87rem; line-height: 1.95; }
+  nav.toc li { break-inside: avoid; }
+  nav.toc .n { font-family: var(--mono); font-size: .74rem; color: var(--muted);
+               margin-right: 8px; }
+  @media (max-width: 620px) { nav.toc ol { columns: 1; } }
 </style>
 
 <header class="top">
@@ -229,6 +276,10 @@
         실패한 명령까지 그대로 남긴 실행 기록입니다.
       </p>
     </div>
+    <p class="lede" style="font-size:.95rem;margin-top:1.2em">
+      항목별 상세 — 각 스킬·에이전트·라이브러리의 역할과 입력·출력 —
+      은 <a href="https://claude.ai/code/artifact/f4e5f98c-88c5-4a96-a58d-41961b8db616"><b>전체 레퍼런스</b></a>에 따로 정리했습니다.
+    </p>
     <div class="env">
       <span><b>환경</b> Linux x86_64 · Python 3.11.15</span>
       <span><b>GPU</b> 없음</span>

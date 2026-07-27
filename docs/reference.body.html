@@ -1,0 +1,1138 @@
+<title>Omniverse 스킬·에이전트·라이브러리 전체 레퍼런스</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+{{CSS:base}}</style>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div class="slug"><b>레퍼런스</b><span>NVIDIA Omniverse</span><span>2026-07-25</span></div>
+    <div class="col">
+      <h1>무엇이 있고, 무엇을 넣으면, 무엇이 나오는가</h1>
+      <p class="lede">
+        Omniverse 생태계의 스킬·에이전트·라이브러리를 하나씩 정리했습니다.
+        각 항목마다 <b>역할 · 입력 · 출력</b>을 적었습니다. 설명은 실제 파일에서 뽑았습니다 —
+        <code>SKILL.md</code>의 본문, <code>run.py</code>의 인자 정의,
+        <code>report_schema.json</code>의 출력 스키마입니다.
+      </p>
+    </div>
+    <div class="env">
+      <span><b>근거</b> 저장소 클론 + 코드 파싱</span>
+      <span><b>직접 실행</b> 라이브러리 13종</span>
+      <span><b>미실행</b> MCP·GPU 항목 (표시함)</span>
+    </div>
+
+    <nav class="toc">
+      <ol>
+        <li><span class="n">01</span><a href="#read">읽는 법 — 4개 층</a></li>
+        <li><span class="n">02</span><a href="#lib">라이브러리 13종</a></li>
+        <li><span class="n">03</span><a href="#mcp">MCP 서버 4종 / 도구 34개</a></li>
+        <li><span class="n">04</span><a href="#cad">CAD→SimReady 스킬 (15)</a></li>
+        <li><span class="n">05</span><a href="#perf">USD 성능 튜닝 스킬 (12)</a></li>
+        <li><span class="n">06</span><a href="#viewer">실시간 뷰어 스킬 (54)</a></li>
+        <li><span class="n">07</span><a href="#pai">Physical AI 스킬 (5+6)</a></li>
+        <li><span class="n">08</span><a href="#sr">SimReady Foundation 스킬 (25)</a></li>
+        <li><span class="n">09</span><a href="#ovpx">ovphysx 내장 스킬 (6)</a></li>
+        <li><span class="n">10</span><a href="#i4h">i4h / amc 스킬 (21)</a></li>
+        <li><span class="n">11</span><a href="#pick">상황별 선택 가이드</a></li>
+      </ol>
+    </nav>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════ 01 읽는 법 -->
+<section id="read">
+  <div class="wrap">
+    <div class="s-head"><span class="n">01</span><h2>읽는 법 — 층이 4개입니다</h2></div>
+    <div class="col">
+      <p>
+        이름이 비슷해서 헷갈리는데, 실제로는 성격이 다른 네 층이 있습니다.
+        이걸 구분하면 나머지가 정리됩니다.
+      </p>
+      <dl class="kv">
+        <div><dt>라이브러리</dt>
+          <dd><b>파이썬 패키지. 실제로 일을 합니다.</b> <code>pip install</code>로 깔고
+              CLI나 파이썬으로 호출합니다. 에이전트 없이도 씁니다.</dd></div>
+        <div><dt>스킬</dt>
+          <dd><b>에이전트용 작업 절차서.</b> 위 라이브러리들을 <b>언제 어떤 순서로</b> 부를지
+              적어둔 문서 + 실행 스크립트. 에이전트가 읽고 따라 합니다.</dd></div>
+        <div><dt>MCP 서버</dt>
+          <dd><b>질문 창구.</b> “이 API 뭐야?”에 답합니다. 파일을 고치지 않습니다.</dd></div>
+        <div><dt>규격 (SimReady)</dt>
+          <dd><b>합격 기준.</b> 위 셋이 만들어낸 결과물을 판정합니다.
+              <code>RB.006</code>처럼 번호가 붙어 있어서 기계가 읽습니다.</dd></div>
+      </dl>
+      <div class="note">
+        <span class="lbl">각 항목 읽는 법</span>
+        <b>입력</b>은 그 도구에 실제로 넘기는 것(파일 경로·옵션),
+        <b>출력</b>은 실제로 나오는 것(파일·JSON 필드·종료 코드)입니다.
+        <span class="chip ok">CPU</span>는 GPU 없이 확인했다는 뜻,
+        <span class="chip no">GPU</span>는 GPU가 필요해 실행하지 못했다는 뜻,
+        <span class="chip mid">키</span>는 API 키가 필요하다는 뜻입니다.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ 02 라이브러리 -->
+<section id="lib">
+  <div class="wrap">
+    <div class="s-head"><span class="n">02</span><h2>라이브러리 13종 — 실제로 일하는 층</h2></div>
+    <div class="col">
+      <p>
+        여기가 가장 중요합니다. 스킬은 결국 <b>이것들을 부르는 절차서</b>일 뿐이라,
+        이 층을 이해하면 스킬 없이도 파이프라인을 짤 수 있습니다.
+        아래 명령과 출력은 전부 직접 실행해서 얻은 것입니다.
+      </p>
+      <h3>변환기 — 다른 포맷을 USD로</h3>
+    </div>
+
+    <div class="items">
+      <div class="item">
+        <header><span class="nm">urdf-usd-converter</span>
+          <span class="badges"><span class="chip ok">CPU</span><span class="chip ok">실행함</span></span></header>
+        <p class="role"><b>로봇 기술 파일(URDF)을 USD로 변환.</b> ROS 생태계의 로봇 정의를
+          Omniverse로 가져오는 표준 경로입니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>arm2.urdf</code> (링크·관절·질량·충돌 정의) + 출력 폴더</dd>
+          <dt class="out">출력</dt><dd>USD 자산 6개 레이어. 인터페이스 레이어 1개 +
+            <code>Payload/</code>에 Contents·Geometry·Materials·MaterialsLibrary·Physics.
+            관절 한계가 <b>라디안→도</b>로 변환되고 <code>NewtonJointAPI</code>가 자동 부착되며,
+            <code>urdf:limit:effort</code> 같은 원본 값은 <code>custom</code> 속성으로 보존됩니다.</dd>
+        </dl>
+        <div class="cmd"><span class="d">$</span> urdf_usd_converter arm2.urdf out/arm2
+<span class="d"># 2초 미만, 종료코드 0, 총 40 KB</span></div>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">mujoco-usd-converter</span>
+          <span class="badges"><span class="chip ok">CPU</span><span class="chip ok">실행함</span></span></header>
+        <p class="role"><b>MuJoCo 모델(MJCF XML)을 USD로 변환.</b> 강화학습 쪽에서 널리 쓰는
+          MuJoCo 씬을 가져옵니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>cartpole.xml</code> (worldbody·joint·geom·actuator) + 출력 폴더</dd>
+          <dt class="out">출력</dt><dd>USD 자산 4개 레이어(MaterialsLibrary 없음).
+            <b>주의:</b> 시각 재질을 만들지 않고, 하나의 프림이 시각·충돌을 겸합니다 —
+            이 때문에 SimReady <code>VM.MAT.001</code>에서 걸립니다.</dd>
+        </dl>
+        <div class="cmd"><span class="d">$</span> mujoco_usd_converter cartpole.xml out/cartpole</div>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">usd-convert-gsplat</span>
+          <span class="badges"><span class="chip ok">CPU</span><span class="chip ok">실행함</span></span></header>
+        <p class="role"><b>3D 가우시안 스플랫을 USD로 변환.</b> 현실을 촬영해 재구성한 결과
+          (Real2Sim의 산출물)를 씬에 넣을 수 있는 형태로 바꿉니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>.ply</code> 또는 <code>.spz</code>
+            (속성 <code>x y z · f_dc_0..2 · opacity · scale_0..2 · rot_0..3</code>).
+            옵션: <code>--up-axis Y|Z</code>, <code>--rotate-x/y/z</code>,
+            <code>--generateSh</code>, <code>--generateScales</code></dd>
+          <dt class="out">출력</dt><dd><code>ParticleField3DGaussianSplat</code> 타입 프림 1개.
+            속성은 <code>positions · opacities · orientations · scales ·
+            radiance:sphericalHarmonicsCoefficients</code>.
+            <b>주의:</b> 기본 출력은 NVIDIA 검증기를 통과하지 못합니다
+            (정렬·기본 프림 문제, 후처리 필요).</dd>
+        </dl>
+        <div class="cmd"><span class="d">$</span> usd-convert-gsplat -i scene.ply -o scene.usdc --up-axis Z
+<span class="g">[3DGS]</span> Loaded 2,000 splats | SH degree: 0 coeffs   <span class="d"># 112 KB → 307 KB</span></div>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">usd-convert-cad</span> · <span class="nm">usd-convert-asset</span>
+          <span class="badges"><span class="chip no">PyPI 없음</span></span></header>
+        <p class="role"><b>CAD(STEP·JT·DGN·HOOPS)와 일반 3D 포맷을 USD로.</b>
+          제조·설계 데이터를 가져오는 경로입니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>CAD 파일. 내부적으로 <code>omni.kit.converter.jt_core</code> 등을 씁니다.</dd>
+          <dt class="out">출력</dt><dd>USD. <b>다만 PyPI에 없습니다</b> — Kit 런타임과 CAD Converter
+            라이선스가 필요합니다. <code>usd-convert-asset</code>은 스킬 문서가
+            “공개 패키지가 나올 때까지 비활성 경로”라고 명시합니다.</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="col"><h3>검증기 — 합격 여부를 판정</h3></div>
+    <div class="items">
+      <div class="item">
+        <header><span class="nm">usd-validation-nvidia</span> <span class="d">→ CLI: nvidia_usd_validate</span>
+          <span class="badges"><span class="chip ok">CPU</span><span class="chip ok">실행함</span></span></header>
+        <p class="role"><b>USD 파일이 문법·구조적으로 올바른지 검사하고, 가능하면 자동 수정.</b>
+          에이전트 자동화에서 가장 많이 쓰게 될 도구입니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>USD 파일 또는 폴더. 주요 옵션:
+            <code>--fix</code>(자동 수정) · <code>--json-output</code> ·
+            <code>--csv-output</code> · <code>-c CATEGORY</code> · <code>-r RULE</code> ·
+            <code>--profile</code> · <code>--stamp</code></dd>
+          <dt class="out">출력</dt><dd>이슈마다 <b>프림 경로 + 요구사항 코드 + 수정 제안</b>이 담긴 JSON.
+            <code>status</code>는 <code>PASS</code>/<code>FAIL</code>,
+            각 이슈에 <code>at.path</code>, <code>requirement.code</code>(예 <code>com.nvidia.usd.VG.010</code>),
+            <code>suggestion.message</code>.
+            <b>종료 코드는 실패 시 1</b> — CI 게이트로 그대로 쓸 수 있습니다.</dd>
+        </dl>
+        <div class="cmd"><span class="d">$</span> nvidia_usd_validate broken.usda --fix
+Subdivision scheme is not set ......... <span class="g">FixStatus.SUCCESS</span>  (×2)
+Prim does not have any extent value ... <span class="g">FixStatus.SUCCESS</span>  (×2)
+Stage does not specify an upAxis ...... FixStatus.NO_LOCATION    <span class="d">← 판단 필요</span>
+Invalid topology found ................ FixStatus.NO_SUGGESTION  <span class="d">← 판단 필요</span></div>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">simready-validate</span>
+          <span class="badges"><span class="chip ok">CPU</span><span class="chip ok">실행함</span></span></header>
+        <p class="role"><b>자산이 SimReady 프로파일을 만족하는지 판정.</b>
+          “시뮬레이션에 쓸 수 있는가”를 기능(feature) 단위로 답합니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>USD 자산 +
+            <code>--profile</code>(예 <code>Prop-Robotics-Neutral</code>) ·
+            <code>--version</code> ·
+            <b>규격 파일 경로 3개</b>: <code>--rules-path</code> ·
+            <code>--features-path</code> · <code>--profiles-path</code>.
+            <b>함정:</b> <code>--rules-path</code>를 빠뜨리면 “프로파일을 찾을 수 없음”이라는
+            엉뚱한 오류가 납니다.</dd>
+          <dt class="out">출력</dt><dd>기능 단위 JSON —
+            <code>features_summary</code>에 각 <code>FET___</code>의
+            <code>passed</code>와 <code>failing requirements</code>(예 <code>['RB.006']</code>).
+            콘솔에는 <code>[PASSED]</code>/<code>[FAILED]</code>. 실패 시 종료 코드 1.</dd>
+        </dl>
+        <div class="cmd"><span class="d">$</span> simready-validate arm2.usda --profile Prop-Robotics-Neutral \
+    --rules-path $SPECS/capabilities --features-path $SPECS/features \
+    --profiles-path $SPECS/profiles/profiles.toml --output r.json
+  <span class="g">[PASSED]</span> Prop-Robotics-Neutral v1.0.0</div>
+      </div>
+    </div>
+
+    <div class="col"><h3>작성·씬 — USD를 만들고 다루기</h3></div>
+    <div class="items">
+      <div class="item">
+        <header><span class="nm">usd-exchange</span> <span class="d">(usdex)</span>
+          <span class="badges"><span class="chip ok">CPU</span><span class="chip ok">실행함</span></span></header>
+        <p class="role"><b>USD를 올바르게 만들어주는 SDK.</b> 그리고 결정적으로
+          <b><code>pxr</code>(OpenUSD 파이썬)을 제공합니다</b> — 이 패키지 하나면 USD를 다 다룹니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>파이썬 API. <code>usdex.core</code>(스테이지·메시·머티리얼 작성),
+            <code>usdex.rtx</code>(MDL 머티리얼)</dd>
+          <dt class="out">출력</dt><dd>NVIDIA 규약을 지키는 USD 레이어.
+            <b>절대 <code>usd-core</code>와 같이 설치하지 마세요</b> — 두 패키지가 각각 OpenUSD 전체를
+            품고 있어서 프로세스가 죽습니다.</dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">ovstage</span>
+          <span class="badges"><span class="chip ok">CPU</span><span class="chip ok">실행함</span></span></header>
+        <p class="role"><b>고성능 씬 데이터 계층.</b> USD를 물리·렌더 엔진이 빠르게 읽을 수 있는
+          형태로 메모리에 올려두고, 질의·수정을 중계합니다. 엔진들 사이의 공용 버스입니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>ovstage.population.open_usd(stage, path, ordinal, domains=…)</code>.
+            <code>PopulationDomain</code>으로 필요한 영역만 로드 (예 <code>PHYSICS</code>)</dd>
+          <dt class="out">출력</dt><dd>질의 가능한 <code>Stage</code> 객체.
+            <code>Query</code>·<code>Filter</code>·<code>Hierarchy</code>·<code>PathDictionary</code>로
+            프림을 찾고, <code>dltensor_to_numpy</code>로 데이터를 꺼냅니다.</dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">ovstorage</span>
+          <span class="badges"><span class="chip ok">CPU</span><span class="chip ok">임포트만</span></span></header>
+        <p class="role"><b>클라우드 자산 접근 API.</b> S3·MinIO 같은 버킷이나 Nucleus 서버의
+          USD를 로컬 파일처럼 다룹니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>버킷·오브젝트 경로, 자격 증명</dd>
+          <dt class="out">출력</dt><dd>자산 스트림·로컬 캐시.
+            <span class="chip mid">주의</span> <code>omniverse://</code> 주소를 쓰려면
+            <code>libOpenGL.so.0</code>이 있어야 합니다 (GPU와 무관, <code>apt-get install libopengl0</code>).</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="col"><h3>물리 — 실제로 움직이게</h3></div>
+    <div class="items">
+      <div class="item">
+        <header><span class="nm">ovphysx</span>
+          <span class="badges"><span class="chip ok">CPU</span><span class="chip ok">실행함</span></span></header>
+        <p class="role"><b>USD 기반 PhysX 물리 엔진.</b> 자산을 실제로 시뮬레이션합니다.
+          강화학습용 환경 복제와 대량 데이터 입출력을 지원합니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>PhysX()</code> 생성 → <code>attach_ovstage(stage)</code> →
+            <code>step_sync(dt)</code>. 데이터 교환은
+            <code>create_tensor_binding(pattern=…, tensor_type=…)</code> —
+            텐서 타입이 <b>78종</b>(관절 위치·속도·힘·질량행렬·자코비안 등)</dd>
+          <dt class="out">출력</dt><dd>numpy(CPU)/DLPack(GPU) 텐서.
+            예: 관절 상태는 <code>(환경수, DOF수)</code>,
+            링크 자세는 <code>(환경수, 링크수, 7)</code> = 위치3 + 쿼터니언4</dd>
+        </dl>
+        <div class="cmd"><span class="d">$</span> python clone.py   <span class="d"># 공식 샘플, GPU 없이</span>
+  Created 3 clones successfully
+  Rigid body binding: count=4, shape=(4, 7)
+  env0: pos=(-0.0006, 0.2424, -0.0012)   env1: pos=(0.0005, 0.6521, -0.0023)</div>
+        <dl class="io">
+          <dt class="out">한계</dt><dd>강체·관절·환경복제는 CPU에서 동작(GPU broadphase → ePABP 자동 전환).
+            <b>변형체·입자는 CUDA 필수</b>이며 조용히 건너뜁니다.</dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">newton</span> + <span class="nm">warp-lang</span>
+          <span class="badges"><span class="chip ok">CPU</span><span class="chip ok">실행함</span></span></header>
+        <p class="role"><b>Warp 위에 얹은 미분 가능 물리 엔진.</b> Warp는 파이썬으로 GPU 커널을
+          작성하는 프레임워크이고, Newton은 그걸로 만든 물리 엔진입니다.
+          로봇 학습에서 물리를 미분해야 할 때 씁니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>@wp.kernel</code>로 장식한 파이썬 함수 +
+            <code>wp.array(..., device="cpu"|"cuda")</code>.
+            <b>커널은 반드시 실제 파일에 있어야 합니다</b> —
+            <code>python -c</code>로는 “exec()로 정의된 코드는 지원 안 함” 오류가 납니다.</dd>
+          <dt class="out">출력</dt><dd>계산된 배열. 첫 실행에 <b>JIT 컴파일 3.5초</b>가 들고
+            <code>~/.cache/warp/</code>에 캐시됩니다 — CI에서 반드시 캐시하세요.</dd>
+        </dl>
+        <div class="cmd"><span class="d">$</span> python warp_cpu_test.py
+devices: ['cpu']
+after 100 steps (1.0s): pos=[1.0, 0, 5.046]  vel=[1.0, 0, -9.81]  <span class="d"># 물리적으로 정확</span></div>
+      </div>
+    </div>
+
+    <div class="col"><h3>렌더·스트리밍 — GPU 필요</h3></div>
+    <div class="items">
+      <div class="item">
+        <header><span class="nm">ovrtx</span>
+          <span class="badges"><span class="chip no">GPU</span><span class="chip mid">임포트만</span></span></header>
+        <p class="role"><b>RTX 레이트레이싱 렌더링 + 센서 시뮬레이션.</b>
+          합성 학습 데이터를 만드는 핵심입니다 — 카메라·라이다 이미지를 씬에서 뽑아냅니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>Renderer</code> + <code>RendererConfig</code>,
+            렌더 대상 프림, <code>RenderVarParam</code>으로 원하는 출력 채널 지정</dd>
+          <dt class="out">출력</dt><dd><code>RenderVarTensor</code> — 색상뿐 아니라
+            깊이·법선·시맨틱 분할·모션벡터 같은 <b>AOV</b>를 텐서로 반환합니다.
+            <code>OVRTX_RENDER_VAR_PICK_HIT</code>로 화면 클릭→프림 선택도 지원.</dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">ovstream</span>
+          <span class="badges"><span class="chip no">GPU 필수</span><span class="chip no">초기화 실패</span></span></header>
+        <p class="role"><b>화면 스트리밍 + 원격 입력.</b> GStreamer 기반으로 렌더 결과를
+          클라이언트에 보내고 마우스·키보드를 되받습니다. 브라우저 뷰어의 전송 계층입니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>ServerConfig(width, height, target_fps, stream_port, …)</code>.
+            전송 5종 — <code>WEBRTC · NATIVE · RTSP · SHM · CUDASHM</code></dd>
+          <dt class="out">출력</dt><dd>영상 스트림 + 역방향 입력 이벤트 4종
+            (<code>KEYBOARD · MOUSE · GAMEPAD · TOUCH</code>).
+            <b>GPU 없으면 <code>initialize()</code>에서 <code>libcuda.so.1</code> 오류</b> —
+            제가 시험한 것 중 CPU 폴백이 없는 유일한 라이브러리입니다.</dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">ovui</span>
+          <span class="badges"><span class="chip no">PyPI 없음</span></span></header>
+        <p class="role"><b>파이썬 UI 라이브러리.</b> 뷰어 창·패널·위젯을 만듭니다.
+          <code>ovrtx</code>(그리기) + <code>ovstream</code>(보내기)와 한 조입니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>파이썬 UI 선언</dd>
+          <dt class="out">출력</dt><dd>창·뷰포트. <b>PyPI에 없어 소스에서 빌드해야 합니다.</b></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ 03 MCP -->
+<section id="mcp">
+  <div class="wrap">
+    <div class="s-head"><span class="n">03</span><h2>MCP 서버 4종 — 도구 34개</h2></div>
+    <div class="col">
+      <p>
+        전부 <b>질문에 답하는</b> 서버입니다. 파일을 만들거나 고치지 않습니다.
+        모델이 존재하지 않는 API 이름을 그럴듯하게 지어내는 걸 막는 용도입니다.
+        <span class="chip mid">키</span> 넷 다 <code>NVIDIA_API_KEY</code>가 필요해
+        <b>실행하지 못했습니다</b> — 아래 도구 목록은 저장소 README에서 읽은 것입니다.
+      </p>
+    </div>
+
+    <div class="items">
+      <div class="item">
+        <header><span class="nm">usd-code-mcp</span> <span class="d">:9903 · 7개</span>
+          <span class="badges"><span class="chip mid">API 키</span></span></header>
+        <p class="role"><b>OpenUSD API 사전.</b> “이 클래스에 무슨 메서드가 있나”를 답합니다.</p>
+        <dl class="io">
+          <dt class="in">묻기</dt><dd>모듈·클래스·메서드 이름, 또는 자연어 설명</dd>
+          <dt class="out">얻기</dt><dd>시그니처·문서·코드 예제.
+            도구:
+            <code>list_usd_modules</code> · <code>list_usd_classes</code> ·
+            <code>get_usd_module_detail</code> · <code>get_usd_class_detail</code> ·
+            <code>get_usd_method_detail</code> · <code>search_usd_code_examples</code> ·
+            <code>search_usd_knowledge</code></dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">kit-mcp</span> <span class="d">:9902 · 12개</span>
+          <span class="badges"><span class="chip mid">API 키</span></span></header>
+        <p class="role"><b>Kit SDK 사전.</b> Omniverse 앱을 직접 만들 때 씁니다.
+          익스텐션 400여 개와 설정 1000여 개는 손으로 찾기 어려운 규모입니다.</p>
+        <dl class="io">
+          <dt class="in">묻기</dt><dd>익스텐션 이름·기능 설명·설정 이름</dd>
+          <dt class="out">얻기</dt><dd>익스텐션 상세·의존성 그래프·공개 API·설정값·앱 템플릿.
+            도구: <code>get_kit_instructions</code> · <code>search_kit_app_templates</code> ·
+            <code>get_kit_app_template_details</code> · <code>search_kit_extensions</code> ·
+            <code>get_kit_extension_details</code> · <code>get_kit_extension_dependencies</code> ·
+            <code>get_kit_extension_apis</code> · <code>get_kit_api_details</code> ·
+            <code>search_kit_code_examples</code> · <code>search_kit_test_examples</code> ·
+            <code>search_kit_settings</code></dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">omni-ui-mcp</span> <span class="d">:9901 · 10개</span>
+          <span class="badges"><span class="chip mid">API 키</span></span></header>
+        <p class="role"><b><code>omni.ui</code> 사전.</b> Omniverse 안에 패널·창을 만들 때.</p>
+        <dl class="io">
+          <dt class="in">묻기</dt><dd>위젯 이름, 레이아웃·스타일 방법</dd>
+          <dt class="out">얻기</dt><dd>클래스 상세·스타일 문서·창 레이아웃 예제.
+            도구: <code>get_ui_instructions</code> · <code>get_ui_class_instructions</code> ·
+            <code>get_ui_style_docs</code> · <code>list_ui_modules</code> ·
+            <code>list_ui_classes</code> · <code>get_ui_module_detail</code> ·
+            <code>get_ui_class_detail</code> · <code>get_ui_method_detail</code> ·
+            <code>search_ui_code_examples</code> · <code>search_ui_window_examples</code></dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">isaacsim-mcp</span> <span class="d">:9904 · 5개</span>
+          <span class="badges"><span class="chip mid">API 키</span></span></header>
+        <p class="role"><b>Isaac Sim 사전.</b> 로봇 시뮬레이션 앱을 만들 때.</p>
+        <dl class="io">
+          <dt class="in">묻기</dt><dd>Isaac Sim 익스텐션·설정·코드 패턴</dd>
+          <dt class="out">얻기</dt><dd>도구: <code>get_isaac_sim_instructions</code> ·
+            <code>search_isaac_sim_extensions</code> · <code>get_isaac_sim_extension_details</code> ·
+            <code>search_isaac_sim_code_examples</code> · <code>search_isaac_sim_settings</code></dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="note">
+        <span class="lbl">설치</span>
+        <code>docker compose -f docker-compose.ngc.yaml up</code> 후
+        <code>claude mcp add usd-code-mcp --scope user -t http http://localhost:9903/mcp</code>.
+        <b><code>--scope user</code>를 빼면</b> 현재 폴더에서 실행할 때만 보입니다 —
+        NVIDIA도 자기 README에서 이 함정을 경고합니다.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ 04 CAD to SimReady -->
+<section id="cad">
+  <div class="wrap">
+    <div class="s-head"><span class="n">04</span><h2>CAD → SimReady 스킬 (하위 15개)</h2></div>
+    <div class="col">
+      <p>
+        <code>omniverse-cad-to-simready</code>는 <b>라우터</b>입니다. 직접 일하지 않고,
+        아래 15개 하위 레퍼런스를 순서대로 부릅니다. 실행 스크립트가 23개 들어 있습니다.
+      </p>
+      <p>
+        중요한 공통 규약 두 가지. 모든 하위 스킬이
+        <code>scripts/check_dependencies.py --report dep.json</code>으로
+        <b>준비 상태를 먼저 점검</b>하고, 실패하면 JSON에 <b>해결 방법을 문장으로</b> 돌려줍니다.
+        그리고 모두 <code>--report</code>(JSON)와 <code>--markdown-report</code>를 지원합니다.
+      </p>
+    </div>
+
+    <div class="items">
+      <div class="item">
+        <header><span class="nm">preflight</span></header>
+        <p class="role"><b>파이프라인 전체의 사전 점검.</b> 필요한 도구가 다 있는지 확인하고,
+          이후 단계들이 참조할 환경 변수 파일을 만듭니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>--env-file</code> 저장 경로,
+            <code>--skip-content-agents</code>(GPU 서비스 건너뛰기)</dd>
+          <dt class="out">출력</dt><dd><code>PHYSICAL_AI_PREFLIGHT_MANIFEST</code> 환경 파일 +
+            마크다운 리포트. 이후 스킬들이 이 매니페스트에서 도구 경로를 읽습니다.</dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">identify-asset-context</span></header>
+        <p class="role"><b>자산이 무엇인지 파악.</b> 파일 자체와 웹 검색으로
+          “이게 무슨 물건인지”를 알아냅니다 — 이후 재질·물리 배정의 근거가 됩니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>source_asset</code>(필수) · <code>output_directory</code>(필수) ·
+            <code>web_search</code>(가능하면) · 선택: <code>converted_usd_path</code> ·
+            <code>preview_image_path</code></dd>
+          <dt class="out">출력</dt><dd><code>asset-context.json</code> —
+            그 안의 <code>recommended_web_queries</code>가 다음 검색어 목록이 됩니다.</dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">convert-to-usd</span> <span class="d">· 변환 라우터</span></header>
+        <p class="role"><b>어떤 변환기를 쓸지 고릅니다.</b> 확장자 표로 판단하지 않고,
+          각 변환기에게 “이 파일 처리할 수 있냐”고 물어본 뒤 우선순위로 고릅니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>source_asset</code> · <code>output_directory</code> ·
+            <code>--report</code> · <code>--markdown-report</code></dd>
+          <dt class="out">출력</dt><dd>JSON 필드:
+            <code>source_asset_path</code> · <code>source_format</code>(urdf/mjcf/gsplat/cad/usd) ·
+            <code>converter_skill</code> · <code>converter_tool</code> ·
+            <code>converter_command</code>(실제 실행한 명령) · <code>output_usd_path</code> ·
+            <code>generated_files</code></dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">validate-usd-minimum</span></header>
+        <p class="role"><b>최소 관문.</b> 무거운 검사를 돌리기 전에 “USD로서 성립하는가”만 봅니다.
+          재질·물리 배정 <b>이전</b>에 통과해야 하는 유일한 게이트입니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>asset.usda</code> · <code>--report</code></dd>
+          <dt class="out">출력</dt><dd>통과/실패 JSON. 여기서 막히면 이후 단계는 무의미합니다.</dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">content-agents</span> · <span class="nm">deploy-content-agents</span>
+          <span class="badges"><span class="chip no">GPU</span><span class="chip mid">API 키</span></span></header>
+        <p class="role"><b>여기가 진짜 "에이전트"입니다.</b> AI가 자산을 보고
+          <b>재질과 물리 속성을 스스로 배정</b>합니다 — “이건 금속 파이프니까 마찰 0.6, 밀도 7800”처럼.
+          나머지 스킬들이 절차서라면 이건 판단하는 서비스입니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>asset_path</code>(필수 USD) ·
+            <code>output_root</code>(필수). 하위 3개 호출로 라우팅됩니다.</dd>
+          <dt class="out">출력</dt><dd><code>input_asset_path</code> ·
+            <code>selected_calls</code>(선택된 호출 순서) + 속성이 배정된 USD.
+            <b>Docker + GPU + <code>NVIDIA_API_KEY</code> 필요</b>해서 실행하지 못했습니다.</dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">simready-conform-profile</span> <span class="d">· 수정 담당</span></header>
+        <p class="role"><b>규격에 맞도록 자산을 고칩니다.</b> 검증 리포트를 읽고
+          실패한 요구사항만 골라 수정합니다. 제가 만든
+          <code>simready_conform.py</code>가 하는 일과 같은 역할입니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>usd_asset</code>(필수) · <code>output_root</code>(필수) ·
+            <code>simready_profile</code>(기본 <code>Prop-Robotics-Neutral</code>) ·
+            <code>profile_version</code>(기본 <code>1.0.0</code>) ·
+            <code>validation_report</code>(검증 JSON — 실패 항목을 여기서 읽음) ·
+            선택: <code>grasp_target_prim</code> · <code>grasp_points</code></dd>
+          <dt class="out">출력</dt><dd><code>input_usd_path</code> · <code>output_usd_path</code> +
+            수정 내역. <b>한계:</b> <code>.usdz</code>는 봉인된 패키지라
+            프림 수준 수정이 불가능하고 메타데이터만 고칩니다.</dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">simready-validate</span> <span class="d">· 판정 담당</span></header>
+        <p class="role"><b>프로파일 적합성 판정 (수정하지 않음).</b>
+          위 <code>simready-validate</code> 라이브러리를 감싼 래퍼입니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>asset_path</code>(필수) · <code>--profile</code> ·
+            <code>--profile-version</code> · <code>--foundation-root</code> ·
+            <code>--foundation-spec-root</code> · <code>--report</code></dd>
+          <dt class="out">출력</dt><dd>기능별 통과 여부 + 실패 요구사항 코드.
+            규격 파일이 없으면 <code>simready-foundation</code>을 클론하라고
+            <b>구체적으로 지시</b>합니다.</dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">omni-asset-validate</span> +
+          <span class="nm">-geometry</span> + <span class="nm">-physics</span></header>
+        <p class="role"><b>범용 자산 검증 3종.</b> 기본 · 형상 전용 · 물리 전용으로 나뉩니다.
+          SimReady보다 넓은 범위의 일반적 품질 검사입니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>asset_path</code>(필수) ·
+            <code>--category</code> · <code>--rule</code> · <code>--timeout</code>(초) ·
+            <code>--no-init-rules</code> · <code>--no-variants</code> · <code>--report</code></dd>
+          <dt class="out">출력</dt><dd>규칙별 이슈 JSON + 다음 단계 제안(<code>--next-step</code>).
+            <code>--timeout</code>은 검증기가 멈출 때 타임아웃 리포트를 돌려줍니다.</dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">assemble-package-source</span></header>
+        <p class="role"><b>배포용 폴더 구성.</b> 최종 자산을 깔끔한 디렉터리 구조로 모읍니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>final_usd</code>(필수, 적합화 완료된 레이어) ·
+            <code>output_root</code>(필수)</dd>
+          <dt class="out">출력</dt><dd><code>deliverable/</code> 디렉터리 +
+            <code>pipeline/</code>에 리포트</dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">nv-core-package-sample</span> +
+          <span class="nm">-validation</span></header>
+        <p class="role"><b>SimReady 패키지로 포장하고 검사.</b> 여러 자산을 하나의 배포 단위로
+          묶습니다 (BOM 포함/미포함 등 프로파일 선택).</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>패키지 소스 디렉터리 · 루트 USD 목록</dd>
+          <dt class="out">출력</dt><dd>SimReady 패키지 + 검증 리포트.
+            프로파일: <code>Package</code> · <code>Package-NoBOM</code> · <code>Package-Candidate</code></dd>
+        </dl>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">ovrtx-render-service</span>
+          <span class="badges"><span class="chip no">GPU</span></span></header>
+        <p class="role"><b>완성된 자산의 미리보기 이미지 생성.</b> 리포트에 붙일 렌더를 뽑습니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>USD 자산 · 카메라·해상도 설정</dd>
+          <dt class="out">출력</dt><dd>PNG 미리보기. <b>RTX GPU 필요.</b></dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ 05 성능 튜닝 -->
+<section id="perf">
+  <div class="wrap">
+    <div class="s-head"><span class="n">05</span><h2>USD 성능 튜닝 스킬 (하위 12개)</h2></div>
+    <div class="col">
+      <p>
+        “씬이 너무 느리다 / 메모리를 너무 먹는다 / FPS가 안 나온다”에 대응하는 워크플로입니다.
+        디지털 트윈처럼 거대한 씬을 다룰 때 필요합니다. 실행 스크립트는 없고
+        <b>Kit의 Scene Optimizer를 어떻게 쓸지 안내하는 문서</b>들입니다.
+      </p>
+      <p>
+        핵심 순서는 <b>측정 → 진단 → 최적화 → 재측정 → 비교</b>입니다.
+        “먼저 재고 나서 고친다”가 강제되어 있는 게 이 스킬의 미덕입니다.
+      </p>
+    </div>
+
+    <div class="items">
+      <div class="item">
+        <header><span class="nm">setup-usd-performance-tuning</span></header>
+        <p class="role"><b>런타임 준비.</b> Kit·Scene Optimizer·Asset Validator가 있는지 확인하고
+          없으면 설치를 안내합니다. 다른 단계들이 이 스킬에 준비를 위임합니다.</p>
+        <dl class="io"><dt class="in">입력</dt><dd>런타임 선택(설치/검증/전환)</dd>
+          <dt class="out">출력</dt><dd>사용 가능한 도구 경로</dd></dl>
+      </div>
+      <div class="item">
+        <header><span class="nm">profile-stage</span> <span class="d">· 측정</span></header>
+        <p class="role"><b>씬의 성능을 잽니다.</b> 최적화 전후로 각각 돌려서 비교 근거를 만듭니다.</p>
+        <dl class="io"><dt class="in">입력</dt><dd>USD 스테이지</dd>
+          <dt class="out">출력</dt><dd>프로파일 JSON(로드 시간·메모리·프림 수 등).
+            <b>이것만으로 원인을 해석하지는 말라</b>고 문서가 명시합니다.</dd></dl>
+      </div>
+      <div class="item">
+        <header><span class="nm">usd-structure-assessment</span> <span class="d">· 진단</span></header>
+        <p class="role"><b>구조적 문제 파악.</b> 레이어 구성·참조 관계에서 무엇이 비용인지 봅니다.
+          수정은 하지 않습니다.</p>
+        <dl class="io"><dt class="in">입력</dt><dd>USD 스테이지</dd>
+          <dt class="out">출력</dt><dd>구조 진단 결과</dd></dl>
+      </div>
+      <div class="item">
+        <header><span class="nm">operations</span> + <span class="nm">so-run-operations</span> <span class="d">· 최적화 실행</span></header>
+        <p class="role"><b>Scene Optimizer 연산 카탈로그와 실행.</b>
+          메시 병합·LOD 생성·인스턴싱·텍스처 압축 같은 연산 목록이 있고,
+          각 연산마다 별도 문서가 붙어 있습니다.</p>
+        <dl class="io"><dt class="in">입력</dt><dd>스테이지 + 적용할 연산과 파라미터</dd>
+          <dt class="out">출력</dt><dd>최적화된 USD</dd></dl>
+      </div>
+      <div class="item">
+        <header><span class="nm">compare-profiles</span> <span class="d">· 재측정 비교</span></header>
+        <p class="role"><b>전후 비교.</b> <b>짝이 맞는 두 프로파일 JSON이 없으면 쓰지 말라</b>고
+          명시돼 있습니다 — 근거 없는 “빨라졌다”를 막습니다.</p>
+        <dl class="io"><dt class="in">입력</dt><dd>baseline JSON + after JSON</dd>
+          <dt class="out">출력</dt><dd>항목별 개선/악화 비교</dd></dl>
+      </div>
+      <div class="item">
+        <header><span class="nm">cad-conversion</span></header>
+        <p class="role"><b>느림의 원인이 변환 단계인지 진단.</b> CAD 변환 시 테셀레이션
+          설정이 과하면 최적화로 풀 수 없는 무게가 생깁니다 — 그건 재변환이 답입니다.</p>
+        <dl class="io"><dt class="in">입력</dt><dd>원본 포맷·변환기·테셀레이션 설정</dd>
+          <dt class="out">출력</dt><dd>재변환 권고 또는 최적화 진행 판단</dd></dl>
+      </div>
+      <div class="item">
+        <header><span class="nm">usd-validation-runner</span> · <span class="nm">omniverse-authentication</span></header>
+        <p class="role"><b>보조.</b> 검증 실행 전담, 그리고 <code>omniverse://</code> 자산을 쓸 때의
+          인증 처리(로컬 파일엔 불필요).</p>
+        <dl class="io"><dt class="in">입력</dt><dd>스테이지 / Nucleus 자격 증명</dd>
+          <dt class="out">출력</dt><dd>검증 결과 / 인증 세션</dd></dl>
+      </div>
+      <div class="item">
+        <header><span class="nm">optimization-report</span> + <span class="nm">report-templates</span></header>
+        <p class="role"><b>최종 보고서 작성.</b> 비교 결과와 검증 근거가 모두 갖춰진
+          <b>마지막에만</b> 쓰라고 명시돼 있습니다.</p>
+        <dl class="io"><dt class="in">입력</dt><dd>프로파일 비교 + 검증 결과</dd>
+          <dt class="out">출력</dt><dd>최적화 보고서(템플릿 기반)</dd></dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ 06 뷰어 -->
+<section id="viewer">
+  <div class="wrap">
+    <div class="s-head"><span class="n">06</span><h2>실시간 뷰어 스킬 (하위 54개)</h2></div>
+    <div class="col">
+      <p>
+        “USD 씬을 보여주는 프로그램을 직접 만들고 싶다”일 때 쓰는 묶음입니다.
+        54개는 하나씩 카드로 볼 규모가 아니라 <b>주제별로 묶었습니다</b>.
+        <code>ovrtx</code>(그리기) + <code>ovstream</code>(보내기) + <code>ovui</code>(UI)를
+        조합하는 방법들입니다.
+      </p>
+      <p class="role" style="margin-top:1.2em">
+        <b>공통 입력</b>은 USD 스테이지와 UI 프레임워크 선택,
+        <b>공통 출력</b>은 동작하는 뷰어 애플리케이션 코드입니다.
+        대부분 <span class="chip no">GPU</span>가 필요합니다.
+      </p>
+    </div>
+
+    <div class="col fam">
+      <h4>어떤 형태로 만들 것인가 — 아키텍처 선택 (8)</h4>
+      <p class="names"><b>streaming-vs-local</b> 원격/로컬 판단 · <b>local-viewer</b> 단독 실행 ·
+        <b>streaming-viewer-recipe</b> 서버 스트리밍 · <b>tauri-local-viewer</b> Tauri 데스크톱 ·
+        <b>electron-shm-viewer</b> Electron + 공유메모리 · <b>cpp-native-viewer</b> C++/ImGui ·
+        <b>headless-shm-cli</b> CI·자동화용 CLI · <b>usd-viewer-app</b> 앱 골격</p>
+
+      <h4>화면 전송 (6)</h4>
+      <p class="names"><b>streaming-server</b> · <b>streaming-client</b> · <b>streaming-lifecycle</b> 연결 수명 ·
+        <b>streaming-messages</b> 프로토콜 · <b>webgl-shm-transport</b> 브라우저 전송 ·
+        <b>ovrtx-rendering</b> 렌더 루프</p>
+
+      <h4>카메라와 시점 (5)</h4>
+      <p class="names"><b>camera-controls</b> 궤도·팬·줌 · <b>camera-picker</b> 다중 카메라 전환 ·
+        <b>camera-auto-select</b> 첫 프레임에 의미 있는 시점 자동 선택 ·
+        <b>render-settings</b> · <b>aov-switching</b> 색·깊이·법선·분할 채널 전환</p>
+
+      <h4>선택과 조작 (9)</h4>
+      <p class="names"><b>object-selection</b> · <b>native-picking-selection</b> GPU 피킹 ·
+        <b>prim-pick-effects</b> · <b>seg-outline-highlight</b> 외곽선 강조 ·
+        <b>selection-feedback</b> · <b>selection-animation</b> ·
+        <b>transform-manipulator</b> 기즈모 · <b>tauri-shm-transform-gizmo</b> ·
+        <b>prim-transform-safety</b> 잘못된 변형 방지</p>
+
+      <h4>씬 데이터 다루기 (6)</h4>
+      <p class="names"><b>stage-loading</b> · <b>stage-management</b> · <b>stage-hierarchy</b> 트리 ·
+        <b>stage-queries</b> 질의 · <b>stage-attribute-reads</b> 속성 읽기 ·
+        <b>prim-info-display</b> 정보 패널</p>
+
+      <h4>UI 구성 (9)</h4>
+      <p class="names"><b>ovui-library</b> · <b>ovui-local-viewer-recipe</b> ·
+        <b>ovwidgets-editor-shell</b> 에디터 셸 · <b>viewer-layout-patterns</b> ·
+        <b>viewer-control-patterns</b> · <b>viewer-data-view-patterns</b> ·
+        <b>viewer-input-routing</b> 입력 라우팅 · <b>viewer-feedback-status</b> ·
+        <b>viewer-ux-workflow</b></p>
+
+      <h4>뷰포트 오버레이 (4)</h4>
+      <p class="names"><b>viewport-overlays</b> · <b>gl-viewport-overlay</b> GPU 3D 오버레이 ·
+        <b>viewport-resize</b> · <b>viewer-backend-interface</b> 백엔드 추상화</p>
+
+      <h4>자산 조달과 배포 (7)</h4>
+      <p class="names"><b>cloud-assets</b> S3·MinIO·ovstorage · <b>huggingface-usd</b> HF에서 USD 받기 ·
+        <b>usd-sample-data</b> 샘플 데이터 · <b>cloud-deployment</b> Docker 배포 ·
+        <b>dependencies</b> 설치 · <b>windows-native-setup</b> · <b>troubleshooting</b></p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ 07 Physical AI -->
+<section id="pai">
+  <div class="wrap">
+    <div class="s-head"><span class="n">07</span><h2>Physical AI 스킬 (5) + NuRec 상위 (6)</h2></div>
+    <div class="col">
+      <p>
+        여기부터는 <b>대규모 데이터 생성</b> 영역입니다. 대부분 OSMO(NVIDIA의 워크로드 클러스터)나
+        GPU를 요구합니다. 전부 <span class="chip no">GPU</span> 또는
+        <span class="chip mid">클러스터</span>가 필요해 실행하지 못했고,
+        아래는 <code>SKILL.md</code>에서 읽은 내용입니다.
+      </p>
+    </div>
+
+    <div class="items">
+      <div class="item">
+        <header><span class="nm">physical-ai-neural-reconstruction</span>
+          <span class="badges"><span class="chip no">GPU</span></span></header>
+        <p class="role"><b>Real2Sim의 관문.</b> 촬영한 현실을 3D 재구성(NuRec)하는 작업들로
+          라우팅합니다. 본체는 <code>NVIDIA/nurec-skills</code> 저장소에 있습니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>센서 기록(영상·라이다·IMU·카메라 자세)</dd>
+          <dt class="out">출력</dt><dd>3D 가우시안 재구성 → PLY/USDZ/메시/깊이.
+            시뮬레이터(CARLA·Isaac Sim·AlpaSim)에 <code>serve-grpc</code>로 공급 가능.
+            요구: Ampere+ GPU VRAM 16 GB+, NGC 키, HF 토큰</dd>
+        </dl>
+      </div>
+      <div class="item">
+        <header><span class="nm">physical-ai-defect-image-generation</span>
+          <span class="badges"><span class="chip mid">OSMO</span></span></header>
+        <p class="role"><b>불량 이미지 합성.</b> 제조 검사(AOI)용으로 PCB·금속·유리의 결함
+          이미지를 Cosmos AnomalyGen으로 생성합니다. 실제 불량 샘플이 부족한 문제를 풉니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>Day 0: USD 모델 → ROI 추출(정상품만 있어도 시작 가능).
+            Day 1: 실제 촬영 이미지</dd>
+          <dt class="out">출력</dt><dd>결함이 합성된 학습 데이터셋 + 라벨,
+            파인튜닝 체크포인트</dd>
+        </dl>
+      </div>
+      <div class="item">
+        <header><span class="nm">physical-ai-video-data-augmentation</span>
+          <span class="badges"><span class="chip mid">OSMO</span></span></header>
+        <p class="role"><b>영상 데이터 증강 + 자동 라벨링.</b> 적은 영상을 조건을 바꿔 늘리고
+          라벨을 자동 생성합니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>원본 영상 + 증강 설정</dd>
+          <dt class="out">출력</dt><dd>증강된 영상 + 의사 라벨(pseudo label)</dd>
+        </dl>
+      </div>
+      <div class="item">
+        <header><span class="nm">physical-ai-people-attribute-search</span>
+          <span class="badges"><span class="chip mid">OSMO</span></span></header>
+        <p class="role"><b>인물 속성 검색용 데이터 생성.</b> 사람 이미지의 의상·속성을 바꿔
+          재식별(re-ID) 학습 데이터를 만듭니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>인물 크롭 이미지</dd>
+          <dt class="out">출력</dt><dd>속성 변형 이미지 + 자동 라벨</dd>
+        </dl>
+      </div>
+      <div class="item">
+        <header><span class="nm">physical-ai-infrastructure-setup-and-resilient-scaling</span>
+          <span class="badges"><span class="chip mid">k8s</span></span></header>
+        <p class="role"><b>위 작업들을 돌릴 인프라 구축.</b> 로컬 MicroK8s나 Azure AKS에
+          클러스터를 세우고 추론 엔드포인트·OSMO를 배포합니다. 장애 복구까지 다룹니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>대상 환경 선택 + 자격 증명</dd>
+          <dt class="out">출력</dt><dd>동작하는 클러스터 + 배포된 엔드포인트</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="col fam">
+      <h4>NuRec 상위 저장소의 6개</h4>
+      <p class="names">
+        <b>nurec-index</b> 라우터 ·
+        <b>physical-ai-datasets</b> NVIDIA 공개 데이터셋 카탈로그(캡처 장비 없을 때 이걸로 시작) ·
+        <b>ncore</b> 센서 기록 → NCore V4 포맷 ·
+        <b>nre</b> 3D 가우시안 학습·렌더·내보내기(핵심) ·
+        <b>asset-harvester</b> 장면에서 개별 물체만 떼어내기 ·
+        <b>nurec-fixer</b> 렌더 결과 후보정(DiffusionHarmonizer)
+      </p>
+      <div class="note warn" style="margin-top:1.4em">
+        <span class="lbl">직접 확인한 것</span>
+        이 사슬에서 <b>CPU로 되는 단계는 마지막 변환뿐</b>입니다.
+        그런데 그 변환 결과가 NVIDIA 자체 검증기를 통과하지 못하므로
+        (<code>.usdc</code>로 저장 + <code>/World</code> Xform으로 감싸기 필요),
+        재구성 직후 후처리를 반드시 넣어야 합니다.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ 08 SimReady Foundation -->
+<section id="sr">
+  <div class="wrap">
+    <div class="s-head"><span class="n">08</span><h2>SimReady Foundation 스킬 (25)</h2></div>
+    <div class="col">
+      <p>
+        규격 저장소가 <b>직접 제공하는</b> 스킬들입니다. 두 종류로 갈립니다 —
+        <b>규격에 맞추는</b> 것과 <b>규격 자체를 늘리는</b> 것.
+      </p>
+      <p>
+        먼저 규격 구조를 알아야 합니다. 4층입니다:
+        <b>요구사항</b>(<code>RB.006</code> 같은 원자 검사) →
+        <b>능력</b>(요구사항 묶음, 12개 그룹) →
+        <b>기능</b>(<code>FET003_BASE_NEUTRAL</code> 같은 용도별 묶음, 52개 스펙) →
+        <b>프로파일</b>(최종 합격 기준, 9종).
+      </p>
+    </div>
+
+    <div class="items">
+      <div class="item">
+        <header><span class="nm">simready-foundation-conform-fet-XXX-*</span> <span class="d">· 11개</span></header>
+        <p class="role"><b>기능 하나씩 맞춰주는 수리공.</b> 각 스킬이 하나의
+          <code>FET</code>를 담당합니다. <b>최종 검증기가 아니라 수리 도구</b>이며,
+          단계마다 같은 검증을 다시 돌리고 첫 실패에서 멈추도록 설계돼 있습니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>USD 자산 + 출력 디렉터리 (원본을 건드리지 않고
+            <b>복사본에서 작업</b>합니다)</dd>
+          <dt class="out">출력</dt><dd>해당 기능을 만족하는 USD + 단계별 검증 결과</dd>
+        </dl>
+        <div class="col fam" style="margin-top:.9em">
+          <p class="names">
+            <b>fet-000-core</b> 기본 구조·메타데이터 ·
+            <b>fet-001-minimal</b> 단위·축·기하 최소 요건 ·
+            <b>fet-003-rigid-body-physics</b> 강체·충돌체 ·
+            <b>fet-004-simulate-multi-body-physics</b> 다물체·관절 ·
+            <b>fet-005-simulate-grasp-physics</b> 파지 벡터·물리 재질 ·
+            <b>fet-006-materials</b> 시각 재질 ·
+            <b>fet-007-nonvisual-materials</b> 비시각(레이더·라이다 반응) ·
+            <b>fet-021-robot-core</b> 로봇 기본 ·
+            <b>fet-023-robot-materials</b> 로봇 재질 ·
+            <b>fet-024-base-articulation</b> 관절 트리 ·
+            <b>create-package</b> 패키지 생성
+          </p>
+        </div>
+      </div>
+
+      <div class="item">
+        <header><span class="nm">simready-foundation-add/update-*</span> <span class="d">· 14개</span></header>
+        <p class="role"><b>규격 자체를 확장하는 도구.</b> 사내 표준을 만들 때 씁니다 —
+          “우리 회사는 모든 자산에 자산번호가 있어야 한다”를 <b>검사 가능한 요구사항으로</b>
+          추가할 수 있습니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>새 요구사항·능력·기능·프로파일의 정의</dd>
+          <dt class="out">출력</dt><dd>안정적 ID를 가진 규격 파일 + 문서 + 예제 + 인덱스 +
+            검사기(<code>validation.py</code>) 뼈대.
+            의존 순서가 강제됩니다 — 맞는 능력이 없으면
+            <code>add-capability</code>를 먼저 하라고 안내합니다.</dd>
+        </dl>
+        <div class="col fam" style="margin-top:.9em">
+          <p class="names">
+            <b>add-</b>/<b>update-</b> × (<b>requirement</b> 원자 검사 · <b>capability</b> 묶음 ·
+            <b>feature</b> 용도별 묶음 · <b>feature-adapter</b> 엔진별 변형 ·
+            <b>profile</b> 최종 기준 · <b>validator</b> 검사 코드) +
+            <b>add-runtime-test</b> 런타임 테스트 · <b>validate-foundation-change</b> 규격 변경 검증
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="note">
+        <span class="lbl">프로파일 9종 — 무엇을 고를 것인가</span>
+        <b>Prop-Robotics-Neutral</b> 엔진 중립(가장 범용, 제가 쓴 것) ·
+        <b>-Physx</b> PhysX 전용 충돌 근사 추가 ·
+        <b>-Isaac</b> Isaac Sim 구성 추가 ·
+        <b>Robot-Body-Neutral / -Runnable / -Isaac</b> 로봇 본체용 ·
+        <b>Package / -NoBOM / -Candidate</b> 배포 패키지용.
+        <b>가장 엄격한 걸 고르지 말고 실제 런타임에 맞는 걸 고르세요.</b>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ 09 ovphysx 내장 -->
+<section id="ovpx">
+  <div class="wrap">
+    <div class="s-head"><span class="n">09</span><h2>ovphysx 휠에 내장된 스킬 (6)</h2></div>
+    <div class="col">
+      <p>
+        <code>pip install ovphysx</code> 하면 <code>site-packages/ovphysx/skills/</code>에
+        같이 들어옵니다. 경로는 <code>ovphysx.ai_skills_path()</code>로 얻습니다.
+        문서 136개와 CI 테스트된 예제 7개도 함께 옵니다 —
+        <b>문서가 설치된 버전과 어긋날 수 없는</b> 배포 방식입니다.
+      </p>
+    </div>
+
+    <div class="items">
+      <div class="item">
+        <header><span class="nm">basic-workflow</span>
+          <span class="badges"><span class="chip ok">CPU</span><span class="chip ok">실행함</span></span></header>
+        <p class="role"><b>최소 동작 예제.</b> 생성 → 씬 붙이기 → 스텝 → 정리.
+          설치가 제대로 됐는지 확인하는 용도로도 씁니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>USD 씬 경로</dd>
+          <dt class="out">출력</dt><dd>시뮬레이션 1스텝 성공.
+            <code>PhysX()</code> → <code>attach_ovstage()</code> → <code>step_sync()</code> →
+            <code>release()</code> 순서를 지켜야 합니다.</dd>
+        </dl>
+      </div>
+      <div class="item">
+        <header><span class="nm">ovphysx-usd-authoring</span></header>
+        <p class="role"><b>물리 속성을 USD에 어떻게 쓸지.</b> 강체·충돌체·질량·물리 씬을
+          <code>.usda</code> 텍스트나 파이썬으로 작성하는 방법.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd><code>UsdPhysics.*</code> API 또는 직접 작성.
+            PhysX 전용 스키마는 <code>ovphysx.codeless_schema_paths()</code>로 등록</dd>
+          <dt class="out">출력</dt><dd>ovphysx가 읽을 수 있는 물리 USD</dd>
+        </dl>
+      </div>
+      <div class="item">
+        <header><span class="nm">clone-environments</span>
+          <span class="badges"><span class="chip ok">CPU</span><span class="chip ok">실행함</span></span></header>
+        <p class="role"><b>강화학습용 환경 대량 복제.</b> 씬 하나를 수천 개로 늘려
+          병렬 학습합니다. 이게 RL 처리량의 핵심입니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>복제할 프림 경로 + 복제 개수</dd>
+          <dt class="out">출력</dt><dd>런타임 전용 환경들.
+            <b>CPU에서도 동작</b>하지만 <code>EnvIds</code> 기반 필터링은 GPU가 필요합니다
+            (경고만 뜨고 진행됨).</dd>
+        </dl>
+      </div>
+      <div class="item">
+        <header><span class="nm">tensor-bindings-cpu</span> / <span class="nm">-gpu</span>
+          <span class="badges"><span class="chip ok">CPU 확인</span></span></header>
+        <p class="role"><b>시뮬레이션 데이터 대량 입출력.</b> 관절 위치·속도·목표값을
+          배열 단위로 읽고 씁니다 — 학습 루프의 병목이 되는 부분입니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>프림 패턴 + 텐서 타입(78종 중)</dd>
+          <dt class="out">출력</dt><dd>CPU판은 numpy 배열, GPU판은 CUDA 포인터/DLPack —
+            <b>CPU 경유 없이 GPU↔GPU 교환</b>이 가능해 PyTorch로 바로 넘길 수 있습니다.</dd>
+        </dl>
+      </div>
+      <div class="item">
+        <header><span class="nm">ovphysx-output-read</span>
+          <span class="badges"><span class="chip ok">CPU</span><span class="chip ok">실행함</span></span></header>
+        <p class="role"><b>결과를 ovstage 경로 그대로 읽고 되쓰기.</b>
+          프림 경로 정보를 잃지 않아야 할 때 씁니다 — 텐서만 받으면
+          “몇 번째가 어느 프림인지”를 따로 관리해야 하는데 그걸 피합니다.</p>
+        <dl class="io">
+          <dt class="in">입력</dt><dd>ovstage 스테이지 + 읽을 출력 그룹</dd>
+          <dt class="out">출력</dt><dd>ovstage에 되쓰인 결과(폐루프).
+            실행 결과: 프레임마다 11개 바디 속도 반전, 4개 출력 그룹 기록</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ 10 i4h / amc -->
+<section id="i4h">
+  <div class="wrap">
+    <div class="s-head"><span class="n">10</span><h2>i4h (18) · amc (3) — 폐루프의 실제 예시</h2></div>
+    <div class="col">
+      <p>
+        <code>i4h-*</code>는 의료 로봇용이지만, <b>Sim2Real 폐루프를 어떻게 단계로 쪼개는지</b>
+        보여주는 공개된 예시 중 가장 완성도가 높습니다. 도메인이 달라도 구조는 그대로 베낄 만합니다.
+        전부 <span class="chip no">GPU</span> 필요.
+      </p>
+    </div>
+
+    <div class="col fam">
+      <h4>학습 데이터 만드는 사슬 — 이 순서가 핵심입니다</h4>
+      <p class="names">
+        <b>workflow-setup</b> 환경 구축 →
+        <b>workflow-create</b> 기존 환경을 포크해 새 과제 생성 →
+        <b>workflow-scene-edit</b> 물체·카메라·성공 조건·랜덤화 편집 →
+        <b>dataset-teleop</b> 사람이 직접 조종해 시연 기록(키보드·리더암·VR → HDF5) →
+        <b>dataset-mimic</b> 시연 하나를 노이즈 주며 수천 개로 증식 →
+        <b>dataset-annotate</b> VLM이 각 에피소드가 과제를 만족하는지 판정 →
+        <b>dataset-replay</b> Isaac Sim에서 재생해 눈으로 확인 →
+        <b>dataset-convert</b> HDF5 → LeRobot 포맷(parquet·비디오) →
+        <b>workflow-finetune</b> GR00T·openpi PI0 정책 학습 →
+        <b>workflow-validate</b> 정책 롤아웃 평가 →
+        <b>workflow-e2e</b> 위 전부를 한 번에
+      </p>
+      <div class="note pass" style="margin-top:1.3em">
+        <span class="lbl">여기서 배울 점 두 가지</span>
+        첫째, <b>모든 단계를 따로 실행할 수 있으면서 <code>-e2e</code>도 따로</b> 있습니다.
+        한 단계만 디버깅할 수도, 전체를 돌릴 수도 있습니다.
+        둘째, <b><code>smoke</code>와 <code>validate</code>가 독립 스킬</b>입니다.
+        빠른 검사가 있어야 자동 루프를 안심하고 켜둘 수 있습니다.
+        <br><br>
+        특히 <b>mimic</b>(시연 1개 → 수천 개)이 이 구조의 핵심입니다.
+        사람의 시연은 비싸고 시뮬레이션 증식은 쌉니다.
+      </div>
+
+      <h4>Real2Sim 분기 — 디지털 트윈 (6)</h4>
+      <p class="names">
+        <b>catheter-navigation-setup</b> 요구사항 확인 ·
+        <b>-digital-twin</b> 실제 CT 영상 → 환자 혈관 디지털 트윈 ·
+        <b>-render-drr</b> 시뮬레이션에서 실제 X선 같은 이미지 생성 ·
+        <b>-viewport</b> 대화형 뷰포트 · <b>-smoke</b> CPU 전용 빠른 검사 ·
+        <b>-e2e</b> 전체 · <b>lerobot-viz</b> 궤적 시각화
+      </p>
+      <p style="font-family:var(--display);font-size:.87rem;color:var(--muted)">
+        <b>-render-drr</b>이 흥미롭습니다 — 시뮬레이션 결과를 실제 장비 영상처럼 만들어
+        시각 간극을 줄이는 접근입니다. Cosmos Transfer와 같은 문제를 도메인 특화 방식으로 풉니다.
+      </p>
+
+      <h4>amc — 카메라 캘리브레이션 (3)</h4>
+      <p class="names">
+        <b>amc-setup-calibration-stack</b> Docker로 서비스 기동(NGC 키 필요) ·
+        <b>amc-run-sample-calibration</b> 번들 샘플로 설치 확인 ·
+        <b>amc-run-video-calibration</b> 내 MP4로 캘리브레이션(REST API)
+      </p>
+      <p style="font-family:var(--display);font-size:.87rem;color:var(--muted)">
+        <b>입력</b> 여러 대 카메라의 영상 또는 RTSP 스트림 →
+        <b>출력</b> 카메라 외부 파라미터(위치·자세).
+        고정 카메라 환경을 Real2Sim으로 옮길 때의 <b>첫 단계</b>입니다 —
+        카메라가 어디 있는지 모르면 재구성이 시작되지 않습니다.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════ 11 선택 가이드 -->
+<section id="pick">
+  <div class="wrap">
+    <div class="s-head"><span class="n">11</span><h2>상황별로 무엇을 쓰나</h2></div>
+    <div class="col">
+      <p>목적에서 출발해 역으로 찾는 표입니다.</p>
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr><th>하고 싶은 것</th><th>쓸 것</th><th>필요</th></tr></thead>
+        <tbody>
+          <tr><td>로봇 URDF를 시뮬레이션에 넣기</td>
+              <td><code>urdf-usd-converter</code> → <code>simready-validate</code> →
+                  적합화 → <code>ovphysx</code></td>
+              <td><span class="chip ok">CPU</span></td></tr>
+          <tr><td>MuJoCo 씬 가져오기</td>
+              <td><code>mujoco-usd-converter</code> (+ 시각 재질 보정 필수)</td>
+              <td><span class="chip ok">CPU</span></td></tr>
+          <tr><td>CAD 도면 가져오기</td>
+              <td><code>usd-convert-cad</code> — Kit 런타임 + 라이선스</td>
+              <td><span class="chip no">라이선스</span></td></tr>
+          <tr><td>자산 품질을 CI로 강제하기</td>
+              <td><code>nvidia_usd_validate</code> + <code>simready-validate</code>
+                  (둘 다 실패 시 종료코드 1)</td>
+              <td><span class="chip ok">CPU</span></td></tr>
+          <tr><td>재질·물리를 AI가 배정</td>
+              <td><code>content-agents</code></td>
+              <td><span class="chip no">GPU</span><span class="chip mid">키</span></td></tr>
+          <tr><td>사내 자산 표준 만들기</td>
+              <td><code>simready-foundation-add-requirement</code> 계열</td>
+              <td><span class="chip ok">CPU</span></td></tr>
+          <tr><td>거대한 씬이 느림</td>
+              <td><code>omniverse-usd-performance-tuning</code> (측정 먼저)</td>
+              <td><span class="chip mid">Kit</span></td></tr>
+          <tr><td>강화학습 환경 대량 생성</td>
+              <td><code>ovphysx</code> clone + tensor bindings</td>
+              <td><span class="chip ok">CPU</span> 규모↑시 GPU</td></tr>
+          <tr><td>합성 학습 이미지 생성</td>
+              <td><code>ovrtx</code> (AOV로 깊이·분할까지)</td>
+              <td><span class="chip no">GPU</span></td></tr>
+          <tr><td>현실을 3D로 재구성</td>
+              <td><code>amc-*</code> → <code>ncore</code> → <code>nre</code> →
+                  <code>usd-convert-gsplat</code> → 후처리</td>
+              <td><span class="chip no">GPU</span></td></tr>
+          <tr><td>브라우저에서 씬 보여주기</td>
+              <td><code>ovrtx</code> + <code>ovstream</code> + <code>ovui</code>,
+                  <code>omniverse-realtime-viewer</code> 참고</td>
+              <td><span class="chip no">GPU</span></td></tr>
+          <tr><td>Kit·Isaac 코드를 직접 작성</td>
+              <td>MCP 서버 4종</td>
+              <td><span class="chip mid">API 키</span></td></tr>
+          <tr><td>로봇 정책 학습 폐루프</td>
+              <td><code>i4h-workflow-*</code> 구조를 참고해 자체 구축</td>
+              <td><span class="chip no">GPU</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col">
+      <div class="note pass">
+        <span class="lbl">시작점 추천</span>
+        표 위쪽 네 줄이 <b>전부 CPU에서 되고, 지금 당장 시작할 수 있습니다.</b>
+        나머지는 그 기반이 잡힌 뒤에 붙이는 게 맞습니다.
+        검사기부터 세우면 이후 모든 자동화가 검증 가능해집니다.
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap col">
+    <p>
+      각 항목의 역할·입력·출력은 다음에서 추출했습니다:
+      <code>SKILL.md</code>/<code>README.md</code>의 <code>## Inputs</code>·
+      <code>## Output Format</code>·<code>## CLI Pattern</code> 절,
+      <code>scripts/run.py</code>의 <code>add_argument</code> 정의(AST 파싱),
+      <code>scripts/report_schema.json</code>의 출력 스키마.
+      <span class="chip ok">실행함</span> 표시가 붙은 것만 실제로 돌려본 것이고,
+      나머지는 문서 근거입니다.
+    </p>
+    <p style="margin:1.4em 0 .3em"><b>같이 보기</b></p>
+    <ul>
+      <li><a href="https://claude.ai/code/artifact/fba5cf2d-e2f2-4764-8930-816f6b2ad430">검증 보고서</a> — 이 도구들을 실제로 이어 붙여 로봇 자산 하나를 통과시킨 기록</li>
+      <li><a href="https://github.com/NVIDIA/skills">NVIDIA/skills</a> ·
+          <a href="https://github.com/NVIDIA-Omniverse/kit-usd-agents">kit-usd-agents</a> ·
+          <a href="https://github.com/NVIDIA/simready-foundation">simready-foundation</a> ·
+          <a href="https://github.com/NVIDIA/nurec-skills">nurec-skills</a></li>
+    </ul>
+  </div>
+</footer>

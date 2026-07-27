@@ -20,6 +20,7 @@ not summarized from documentation.
 | **Adoption** | A staged plan to get from zero to agent-run pipelines — [`docs/05-adoption-roadmap.md`](docs/05-adoption-roadmap.md) |
 | **Working code** | A conformance agent that takes a converted robot from *failing* to *SimReady PASS* — [`scripts/`](scripts/) |
 | **Illustrated report** | The whole investigation written for a newcomer, with figures — [`docs/report.html`](docs/report.html) |
+| **Per-item reference** | Every skill, agent and library with its role, inputs and outputs — [`docs/reference.html`](docs/reference.html) |
 
 ---
 
@@ -133,13 +134,20 @@ CPU runners.** Only reconstruction, rendering and large-scale RL need GPUs.
 ```
 docs/               analysis and setup guides (5 documents)
 docs/report.html    illustrated beginner-facing report (self-contained)
-docs/figures/        figures, plotted from pipeline artifacts
+docs/reference.html per-item reference: role, inputs, outputs (self-contained)
+docs/base.css       design system shared by both pages
+docs/figures/       figures, plotted from pipeline artifacts
 scripts/            bootstrap, pipeline runner, conformance agent,
                     Real2Sim post-process, trajectory recorder, figure/report build
 examples/           the URDF / MuJoCo / 3DGS fixtures used in every verified run
 .mcp.json           Omniverse MCP server registration
 CLAUDE.md           session instructions for agents working in this repo
 ```
+
+The reference page is generated from the upstream skill sources, not written from
+memory: `## Inputs` / `## Output Format` / `## CLI Pattern` sections of each `SKILL.md`,
+the `add_argument` calls in each `scripts/run.py` (parsed via AST, never executed), and
+each `scripts/report_schema.json`. Entries marked *실행함* were additionally run here.
 
 Every figure is plotted from data read back out of the USD stages, the trajectory CSV and
 the validator JSON. None are viewport screenshots — viewport rendering needs `ovrtx` and a
