@@ -78,6 +78,9 @@ code you teach the fixer moves permanently out of the model's column. See
 # whether the profile is closed, then suggests the command
 .venv-ov/bin/python scripts/inspect_dxf.py mypart.dxf
 
+# If it turns out to be a whole drawing set, look at it
+.venv-ov/bin/python scripts/render_dxf.py mypart.dxf --out .out/look --split
+
 # 3. Install the Omniverse agent skills into this repo
 npx skills add nvidia/skills \
   --skill omniverse-cad-to-simready omniverse-usd-performance-tuning \

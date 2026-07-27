@@ -113,6 +113,43 @@ def main() -> int:
         total.update(c)
     print(f"entities  : {sum(total.values())} across {len(per_layer)} layer(s)")
 
+    # ── is this one part, or a whole drawing set?
+    # Worth answering before anything else: a production sheet set tiles several
+    # framed sheets into one modelspace, and the largest frame then wins the
+    # boundary contest. Everything downstream still "works" — it just extrudes
+    # the title block.
+    findings, suggestion, frame_layer = [], None, None
+    n_insert = total.get("INSERT", 0)
+    n_dim = total.get("DIMENSION", 0)
+    scale_loops, _ = extract_loops(msp, None, 6.0)
+    frames = []
+    for lp in scale_loops:
+        if len(lp) == 4:
+            sz = lp.max(axis=0) - lp.min(axis=0)
+            if min(sz) > 300:                      # A-series sheets, any unit
+                frames.append((float(np.prod(sz)), float(sz[0]), float(sz[1])))
+    frames.sort(reverse=True)
+
+    assembly = len(frames) >= 2 or (n_insert > 50 and n_dim > 5)
+    if assembly:
+        findings.append("assembly-drawing-set")
+        print()
+        print("  VERDICT: this looks like an assembly / multi-sheet drawing SET,")
+        print("           not a single part.")
+        if len(frames) >= 2:
+            print(f"           {len(frames)} sheet-frame rectangles: "
+                  + ", ".join(f"{w:.0f}x{h:.0f}" for _, w, h in frames[:4]))
+        if n_insert:
+            print(f"           {n_insert} block references (INSERT), {n_dim} dimensions")
+        print()
+        print("           drawing_to_usd.py extrudes ONE closed profile. Given a set,")
+        print("           it will extrude the largest rectangle — the title block.")
+        print("           Render it to see what you have:")
+        print(f"             python scripts/render_dxf.py {path} --out .out/look --split")
+        print("           Then either isolate one flat part into its own DXF, or —")
+        print("           if the subject is 3D equipment or piping — build the solid")
+        print("           in CAD and bring it in via usd-convert-cad instead.")
+
     # ── closed loops per layer (the number that decides everything)
     print()
     print(f"  {'layer':<20} {'closed':>6} {'open':>5} {'noise':>6}  entity mix")
@@ -137,7 +174,6 @@ def main() -> int:
     print()
     print(f"closed profiles found : {len(all_loops)}")
 
-    findings, suggestion, frame_layer = [], None, None
     if not all_loops:
         print()
         print("PROBLEM: no closed profile — nothing can be extruded.")
@@ -253,6 +289,9 @@ def main() -> int:
             "closed_profiles": len(all_loops),
             "layers": layer_rows, "usable_layers": usable,
             "chainable_layers": chainable, "frame_layer": frame_layer,
+            "looks_like_assembly_set": assembly,
+            "sheet_frames": [{"w": w, "h": h} for _, w, h in frames],
+            "insert_count": n_insert, "dimension_count": n_dim,
             "findings": findings, "suggested_command": suggestion,
             "ignored": sorted(set(skipped)),
         }, indent=2))

@@ -343,6 +343,44 @@ vertices on every arc.
 
 ---
 
+## When the file is a whole drawing set
+
+Production drawings are frequently a *set* — several framed sheets tiled into one
+modelspace, each with title block, BOM and multiple views. The inspector says so first:
+
+```
+  VERDICT: this looks like an assembly / multi-sheet drawing SET, not a single part.
+           3 sheet-frame rectangles: 6300x4455, 3360x2376, 2100x1485
+           351 block references (INSERT), 9 dimensions
+```
+
+The detection is two signals: **two or more large 4-point rectangles** (sheet frames at
+different scales), or **many `INSERT` block references alongside dimensions**.
+
+This matters because nothing downstream would complain. The largest frame wins the
+boundary contest, so the pipeline cheerfully extrudes the title block — on one real
+drawing that produced a "2637 kg part" that was, geometrically, the border.
+
+To see what you actually have:
+
+```bash
+python scripts/render_dxf.py yourfile.dxf --out .out/look --split
+```
+
+`render_dxf.py` draws the sheet through ezdxf's own backend, so blocks are expanded
+properly, then splits it into regions along the empty gaps — one PNG per sheet. It
+renders once and crops, because re-rendering per region on a real set takes minutes.
+
+Then:
+
+- **A flat part is in there** → isolate that one view into its own DXF (in CAD: copy the
+  outline to a new file) and run the pipeline on that.
+- **The subject is 3D equipment or piping** → 2D extrusion is the wrong shape of tool
+  entirely. Build the solid in CAD or a plant-design package, export STEP/JT, and bring it
+  in through `usd-convert-cad`.
+
+---
+
 ## Attaching other drawing formats
 
 The DXF path is the foundation; other inputs reach it by converting first. None of these
@@ -376,6 +414,7 @@ its resolved scale on every run.
 
 | Symptom | Cause | Fix |
 |---|---|---|
+| `VERDICT: assembly / multi-sheet drawing SET` | several framed sheets in one modelspace | see below — this tool is for one part |
 | `no closed profiles found` | outline drawn as separate lines/arcs | `--chain-tolerance 0.01`, or join it in CAD |
 | same, and no open segments either | geometry is in a block or paperspace | explode the block, or move it to modelspace |
 | part is 1000× too big or small | units wrong or undeclared | `--units mm` — check the inspector's mass preview |
