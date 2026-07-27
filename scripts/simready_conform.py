@@ -87,12 +87,27 @@ def add_grasp_vector(stage: Usd.Stage, grasp_prim_path: str | None = None) -> st
         hi = Gf.Vec3f(mid_x, mid_y, top + max(0.02, (mx[2] - mn[2]) * 0.1))
 
     path = grasp_prim_path or f"{default_prim.GetPath()}/grasp_identifier_0"
+    width = 0.005
     curves = UsdGeom.BasisCurves.Define(stage, path)
     curves.CreateTypeAttr().Set(UsdGeom.Tokens.linear)
     curves.CreateCurveVertexCountsAttr().Set([2])
     curves.CreatePointsAttr().Set([lo, hi])
-    curves.CreateWidthsAttr().Set([0.005, 0.005])
-    curves.CreateExtentAttr().Set([lo, hi])
+    curves.CreateWidthsAttr().Set([width, width])
+    # Let USD compute the extent. It must enclose the swept width rather than
+    # just the centreline, and computing it by hand reproduces the bounds only
+    # to within float32 rounding — enough for ExtentsChecker to call it
+    # "incorrect extent value". ComputeExtentFromPlugins is the same routine the
+    # checker compares against, so it agrees bit for bit.
+    computed = UsdGeom.Boundable.ComputeExtentFromPlugins(
+        UsdGeom.Boundable(curves.GetPrim()), Usd.TimeCode.Default())
+    if computed:
+        curves.CreateExtentAttr().Set(computed)
+    else:                                    # no plugin: pad by half the width
+        r = width / 2.0
+        curves.CreateExtentAttr().Set([
+            Gf.Vec3f(min(lo[0], hi[0]) - r, min(lo[1], hi[1]) - r, min(lo[2], hi[2]) - r),
+            Gf.Vec3f(max(lo[0], hi[0]) + r, max(lo[1], hi[1]) + r, max(lo[2], hi[2]) + r),
+        ])
     UsdGeom.Imageable(curves).CreatePurposeAttr().Set(UsdGeom.Tokens.guide)
     return path
 
@@ -115,6 +130,8 @@ def bind_physics_materials(stage: Usd.Stage, static_friction=0.7,
     if not unbound:
         return None, []
 
+    # A grouping prim left untyped fails TypeChecker, so define it as a Scope.
+    UsdGeom.Scope.Define(stage, f"{default_prim.GetPath()}/PhysicsMaterials")
     mat_path = f"{default_prim.GetPath()}/PhysicsMaterials/DefaultPhysicsMaterial"
     material = UsdShade.Material.Define(stage, mat_path)
     phys_mat = UsdPhysics.MaterialAPI.Apply(material.GetPrim())
@@ -166,6 +183,7 @@ def bind_visual_materials(stage: Usd.Stage,
     if not unbound:
         return None, []
 
+    UsdGeom.Scope.Define(stage, f"{default_prim.GetPath()}/Looks")
     mat_path = f"{default_prim.GetPath()}/Looks/DefaultVisualMaterial"
     material = UsdShade.Material.Define(stage, mat_path)
     shader = UsdShade.Shader.Define(stage, f"{mat_path}/Shader")

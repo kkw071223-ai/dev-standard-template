@@ -183,6 +183,21 @@ else
   bad "conformance step failed — see $OUT/conform.log"; exit 1
 fi
 
+# --------------------------------------------------- 4b. USD validity, again
+# Conformance authors new prims (grasp curve, material scopes), so the stage has
+# to be re-checked as USD — not only against the SimReady profile. Without this
+# the pipeline can hand over an asset that passes its profile while carrying a
+# malformed extent or an untyped grouping prim.
+stage "USD re-validation (post-conformance)"
+if "$OV_VENV/bin/nvidia_usd_validate" "$CONFORMED" \
+      --json-output "$OUT/usd-validate-after.json" \
+      >"$OUT/usd-validate-after.log" 2>&1; then
+  ok "no issues"
+else
+  bad "conformance introduced USD issues"
+  grep -E "^(ERROR|WARNING)" "$OUT/usd-validate-after.log" | head -6 | sed 's/^/      /'
+fi
+
 # ----------------------------------------------------------- 5. SimReady after
 stage "SimReady re-validation"
 sr_validate "$CONFORMED" "$OUT/simready-after.json"

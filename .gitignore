@@ -16,3 +16,6 @@ __pycache__/
 
 # figure intermediates (PNG masters are kept; webp is derived at build time)
 docs/figures/*.webp
+
+# exported hand-off copies (regenerate: scripts/export_asset.py)
+deliverables/
