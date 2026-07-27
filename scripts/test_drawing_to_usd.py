@@ -118,6 +118,35 @@ def main() -> int:
     if not ok:
         FAILS.append("classify-separate")
 
+    print("\nsegment chaining (opt-in, for exploded profiles)")
+    from drawing_to_usd import chain_segments
+
+    def chk(name, segs, tol, want_closed, want_left):
+        closed, left = chain_segments(segs, tol)
+        ok = len(closed) == want_closed and len(left) == want_left
+        if ok and closed:
+            ok = all(len(c) >= 3 for c in closed)
+        print(f"  {'PASS' if ok else 'FAIL'}  {name:<34} "
+              f"closed={len(closed)} leftover={len(left)}")
+        if not ok:
+            FAILS.append(name)
+
+    box = [np.array([[0, 0], [10, 0]], float), np.array([[10, 0], [10, 10]], float),
+           np.array([[10, 10], [0, 10]], float), np.array([[0, 10], [0, 0]], float)]
+    chk("4 lines form one loop", box, 1e-6, 1, 0)
+    chk("segments given reversed", [box[0], box[2][::-1], box[1], box[3]], 1e-6, 1, 0)
+    gap = [box[0], box[1], box[2],
+           np.array([[0, 10], [0, 0.05]], float)]          # 0.05 short
+    chk("gap 0.05, tol 0.01 -> open", gap, 0.01, 0, 4)
+    chk("gap 0.05, tol 0.10 -> closed", gap, 0.10, 1, 0)
+    two = box + [np.array([[20, 0], [30, 0]], float),
+                 np.array([[30, 0], [30, 10]], float),
+                 np.array([[30, 10], [20, 10]], float),
+                 np.array([[20, 10], [20, 0]], float)]
+    chk("two separate loops", two, 1e-6, 2, 0)
+    chk("dangling segment is reported", box + [np.array([[50, 50], [60, 60]], float)],
+        1e-6, 1, 1)
+
     print()
     if FAILS:
         print(f"FAILED: {len(FAILS)} — {', '.join(FAILS)}")

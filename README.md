@@ -74,6 +74,10 @@ code you teach the fixer moves permanently out of the model's column. See
 ./scripts/run_pipeline.sh examples/mujoco/cartpole.xml
 ./scripts/run_pipeline.sh examples/drawing/bracket.dxf
 
+# For your own drawing, inspect it first — it reports layers, units and
+# whether the profile is closed, then suggests the command
+.venv-ov/bin/python scripts/inspect_dxf.py mypart.dxf
+
 # 3. Install the Omniverse agent skills into this repo
 npx skills add nvidia/skills \
   --skill omniverse-cad-to-simready omniverse-usd-performance-tuning \

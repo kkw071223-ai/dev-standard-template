@@ -97,8 +97,94 @@ def _bulge_points(p0, p1, bulge, seg_deg=6.0):
     return pts[:-1] if len(pts) > 1 else pts
 
 
-def extract_loops(msp, layers: set[str] | None, seg_deg: float) -> list[np.ndarray]:
-    """Closed 2D loops, as (N,2) arrays. Only closed profiles can be extruded."""
+def chain_segments(segments, tol: float):
+    """Join open polylines end-to-end into closed loops, within `tol`.
+
+    Off by default and never automatic. Chaining needs a distance tolerance, and
+    a wrong tolerance does not error — it produces a *different part*, either
+    welding a gap that was meant to be there or leaving a profile open. So the
+    caller must pass a tolerance explicitly, and every leftover is reported.
+
+    Returns (closed_loops, leftover_open_chains).
+    """
+    segs = [np.asarray(s, float) for s in segments if len(s) >= 2]
+    consumed = [False] * len(segs)
+    closed, leftovers = [], []
+
+    def near(a, b):
+        return float(np.hypot(*(np.asarray(a) - np.asarray(b)))) <= tol
+
+    for i in range(len(segs)):
+        if consumed[i]:
+            continue
+        chain = list(segs[i])
+        taken = [i]                       # roll back together if it never closes
+
+        grew = True
+        while grew and not (len(chain) >= 3 and near(chain[0], chain[-1])):
+            grew = False
+            for j in range(len(segs)):
+                if consumed[j] or j in taken:
+                    continue
+                for pts in (segs[j], segs[j][::-1]):
+                    if near(chain[-1], pts[0]):
+                        chain.extend(pts[1:])
+                    elif near(chain[0], pts[-1]):
+                        chain[:0] = list(pts[:-1])
+                    else:
+                        continue
+                    taken.append(j); grew = True
+                    break
+                if grew:
+                    break
+
+        arr = np.asarray(chain, float)
+        if len(arr) >= 3 and near(arr[0], arr[-1]):
+            for j in taken:
+                consumed[j] = True
+            closed.append(arr[:-1] if np.allclose(arr[0], arr[-1]) else arr)
+        # else: leave every segment in `taken` free for another chain to use
+
+    leftovers = [segs[i] for i, c in enumerate(consumed) if not c]
+    return closed, leftovers
+
+
+def _entity_polyline(e, seg_deg: float):
+    """Open entities as point runs, so chain_segments can try to join them."""
+    t = e.dxftype()
+    if t == "LINE":
+        return np.array([[e.dxf.start.x, e.dxf.start.y],
+                         [e.dxf.end.x, e.dxf.end.y]], float)
+    if t == "ARC":
+        c = e.dxf.center
+        return _arc_points(c.x, c.y, e.dxf.radius,
+                           e.dxf.start_angle, e.dxf.end_angle, seg_deg)
+    if t == "LWPOLYLINE":
+        pts = list(e.get_points("xyb"))
+        out = []
+        for i, (x, y, b) in enumerate(pts):
+            out.append([x, y])
+            if abs(b) > 1e-12 and i + 1 < len(pts):
+                nx, ny, _ = pts[i + 1]
+                out.extend(_bulge_points((x, y), (nx, ny), b, seg_deg)[1:])
+        return np.asarray(out, float)
+    if t == "POLYLINE":
+        return np.array([[v.dxf.location.x, v.dxf.location.y] for v in e.vertices], float)
+    if t == "SPLINE":
+        try:
+            return np.array([[p[0], p[1]] for p in e.flattening(0.01)], float)
+        except Exception:
+            return None
+    return None
+
+
+def extract_loops(msp, layers: set[str] | None, seg_deg: float,
+                  chain_tol: float = 0.0) -> list[np.ndarray]:
+    """Closed 2D loops, as (N,2) arrays. Only closed profiles can be extruded.
+
+    With `chain_tol` > 0, open segments are additionally joined end-to-end —
+    see chain_segments for why that is opt-in.
+    """
     loops, skipped = [], []
 
     def keep(e):
@@ -134,6 +220,33 @@ def extract_loops(msp, layers: set[str] | None, seg_deg: float) -> list[np.ndarr
                 skipped.append(f"{t} on '{e.dxf.layer}' (not a closed loop on its own)")
         except Exception as exc:                       # keep going, report at the end
             skipped.append(f"{t}: {type(exc).__name__}")
+
+    if chain_tol:
+        # Second pass: a profile drawn as loose LINE/ARC segments, or as open
+        # polylines, only becomes usable once its ends are joined.
+        opens = []
+        for e in msp:
+            if not keep(e) or e.dxftype() not in ("LINE", "ARC", "SPLINE",
+                                                  "LWPOLYLINE", "POLYLINE"):
+                continue
+            if e.dxftype() == "LWPOLYLINE" and e.closed:
+                continue
+            if e.dxftype() == "POLYLINE" and e.is_closed:
+                continue
+            p = _entity_polyline(e, seg_deg)
+            if p is not None and len(p) >= 2:
+                opens.append(p)
+        if opens:
+            joined, leftover = chain_segments(opens, chain_tol)
+            loops.extend(joined)
+            skipped = [s for s in skipped if "not a closed loop on its own" not in s]
+            if joined:
+                skipped.append(f"chained {len(opens) - len(leftover)} open segment(s) "
+                               f"into {len(joined)} loop(s) at tol={chain_tol:g}")
+            if leftover:
+                skipped.append(f"{len(leftover)} open segment(s) still unjoined at "
+                               f"tol={chain_tol:g} — raise --chain-tolerance or close "
+                               f"the profile in CAD")
 
     # drop degenerate loops
     clean = []
@@ -360,6 +473,10 @@ def main() -> int:
                     help="kg/m3 for mass (default 7850 = steel)")
     ap.add_argument("--arc-segment-deg", type=float, default=6.0,
                     help="arc tessellation step in degrees (default 6)")
+    ap.add_argument("--chain-tolerance", type=float, default=0.0,
+                    help="join open LINE/ARC/polyline segments whose ends are within "
+                         "this distance, IN DRAWING UNITS. Off by default: a wrong "
+                         "tolerance silently yields a different part.")
     ap.add_argument("--report", default=None, help="write a JSON report here")
     args = ap.parse_args()
 
@@ -373,7 +490,8 @@ def main() -> int:
     scale, unit_name = resolve_scale(doc, args.units)
     layers = set(s.strip() for s in args.layers.split(",")) if args.layers else None
 
-    loops, skipped = extract_loops(msp, layers, args.arc_segment_deg)
+    loops, skipped = extract_loops(msp, layers, args.arc_segment_deg,
+                                   chain_tol=args.chain_tolerance)
     if not loops:
         print("ERROR: no closed profiles found. drawing_to_usd extrudes closed "
               "loops (LWPOLYLINE/POLYLINE/CIRCLE); open geometry is ignored.",
@@ -417,6 +535,7 @@ def main() -> int:
               "thickness_m": thickness, "loops": len(loops),
               "outer_loop_points": len(outer), "holes": len(holes),
               "loops_outside_boundary": len(outside),
+              "chain_tolerance": args.chain_tolerance,
               "volume_m3": round(volume, 9), **info,
               "ignored_entities": sorted(set(skipped))}
 

@@ -36,8 +36,13 @@ case "$SRC" in
 esac
 PROFILE="${2:-$DEFAULT_PROFILE}"
 PROFILE_VERSION="${3:-1.0.0}"
-DXF_THICKNESS="${DXF_THICKNESS:-0.012}"
-DXF_DENSITY="${DXF_DENSITY:-7850}"
+# DXF knobs. Run scripts/inspect_dxf.py on a drawing first — it reports which
+# layers hold geometry and whether the profile needs chaining.
+DXF_THICKNESS="${DXF_THICKNESS:-0.012}"   # metres
+DXF_DENSITY="${DXF_DENSITY:-7850}"        # kg/m3, steel
+DXF_LAYERS="${DXF_LAYERS:-}"              # e.g. OUTLINE,HOLES
+DXF_UNITS="${DXF_UNITS:-}"                # e.g. mm, when the file declares none
+DXF_CHAIN_TOL="${DXF_CHAIN_TOL:-}"        # drawing units, joins open segments
 
 NAME="$(basename "${SRC%.*}")"
 OUT="$ROOT/.out/$NAME"
@@ -96,8 +101,13 @@ case "$SRC" in
 esac
 
 if [ "$DRAWING" = 1 ]; then
+  dxf_opts=()
+  [ -n "$DXF_LAYERS" ]    && dxf_opts+=(--layers "$DXF_LAYERS")
+  [ -n "$DXF_UNITS" ]     && dxf_opts+=(--units "$DXF_UNITS")
+  [ -n "$DXF_CHAIN_TOL" ] && dxf_opts+=(--chain-tolerance "$DXF_CHAIN_TOL")
   if "$OV_VENV/bin/python" "$ROOT/scripts/drawing_to_usd.py" "$SRC" "$OUT/converted" \
         --name "$NAME" --thickness "$DXF_THICKNESS" --density "$DXF_DENSITY" \
+        "${dxf_opts[@]}" \
         --report "$OUT/drawing.json" >"$OUT/convert.log" 2>&1; then
     ASSET="$OUT/converted/$NAME.usdc"
     ok "drawing_to_usd -> extruded solid (${DXF_THICKNESS} m thick)"

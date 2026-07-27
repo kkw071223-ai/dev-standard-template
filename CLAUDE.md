@@ -67,8 +67,21 @@ Three fixtures must keep passing — **if any stops, you broke something**:
 The DXF fixture also has unit tests for its geometry invariants:
 
 ```bash
-.venv-ov/bin/python scripts/test_drawing_to_usd.py     # watertight + winding + volume
+.venv-ov/bin/python scripts/test_drawing_to_usd.py   # watertight, winding, volume, chaining
 ```
+
+`examples/drawing/messy.dxf` is the adversarial fixture — no declared units, an outline
+exploded into loose lines and arcs, a title block and a second unrelated part. It passes
+only with the right options, which is the point:
+
+```bash
+DXF_THICKNESS=0.006 DXF_LAYERS=OUTLINE,HOLES DXF_UNITS=mm DXF_CHAIN_TOL=0.01 \
+  ./scripts/run_pipeline.sh examples/drawing/messy.dxf
+```
+
+**On a user's own drawing, run `scripts/inspect_dxf.py` first and read it before
+converting.** It reports units, per-layer closed-loop counts, extents and a mass preview.
+Guessing `--layers` wastes a cycle; the inspector tells you.
 
 ---
 
