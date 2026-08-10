@@ -24,7 +24,7 @@
   <div class="slug"><b>07 · 에이전트 PC 설계 · 실측 반영</b></div>
   <h1>07 — 상시 가동 에이전트 PC 설계서</h1>
   <p class="lede">대상: <b>Windows 11 Pro만 깔려 있고 Claude Desktop 하나만 설치된 모바일 워크스테이션</b><br>목표: 이 PC를 <b>제2의 뇌 + 상시 가동 자율 에이전트</b>로 만든다.<br>기준일: <b>2026-08-10</b> · 사전 점검 실측 반영 완료<br>사람이 할 일과 붙여넣을 지시문: [`bootstrap/README.md`](../bootstrap/README.md), [`bootstrap/PROMPT.md`](../bootstrap/PROMPT.md)<br><b>실측값이 이 문서보다 우선한다:</b> [`bootstrap/preflight-report.txt`](../bootstrap/preflight-report.txt)</p>
-  <nav class="toc"><ol><li><a href="#0-이-문서를-읽는-법"><span class="n">0</span>이 문서를 읽는 법</a></li><li><a href="#1-2026-08-10-기준-nvidia-스택-현황"><span class="n">1</span>2026-08-10 기준 NVIDIA 스택 현황</a></li><li><a href="#2-하드웨어-판독--당신의-pc가-실제로-무엇인가"><span class="n">2</span>하드웨어 판독 — 당신의 PC가 실제로 무엇인가</a></li><li><a href="#3-전체-시스템-구성도"><span class="n">3</span>전체 시스템 구성도</a></li><li><a href="#4-vram-24gb-예산-설계"><span class="n">4</span>VRAM 24GB 예산 설계</a></li><li><a href="#5-디스크와-디렉터리-레이아웃"><span class="n">5</span>디스크와 디렉터리 레이아웃</a></li><li><a href="#6-obsidian-완전-입문"><span class="n">6</span>Obsidian 완전 입문</a></li><li><a href="#7-notion-역할과-스키마"><span class="n">7</span>Notion 역할과 스키마</a></li><li><a href="#8-텔레그램-io와-pc-꺼짐-응답-설계"><span class="n">8</span>텔레그램 I/O와 &quot;PC 꺼짐&quot; 응답 설계</a></li><li><a href="#9-도메인-워크스페이스-스키마--환각-방지-규약"><span class="n">9</span>도메인 워크스페이스 스키마 — 환각 방지 규약</a></li><li><a href="#10-루프-엔지니어링--상태기계"><span class="n">10</span>루프 엔지니어링 — 상태기계</a></li><li><a href="#11-그래프-엔지니어링--도메인별-dag"><span class="n">11</span>그래프 엔지니어링 — 도메인별 DAG</a></li><li><a href="#12-자율성-경계"><span class="n">12</span>자율성 경계</a></li><li><a href="#13-단계별-구축-순서"><span class="n">13</span>단계별 구축 순서</a></li><li><a href="#14-필요-계정과-키-목록"><span class="n">14</span>필요 계정과 키 목록</a></li><li><a href="#15-검증된-것과-추정인-것"><span class="n">15</span>검증된 것과 추정인 것</a></li><li><a href="#16-다음-단계"><span class="n">16</span>다음 단계</a></li><li><a href="#17-지금-당장-사람이-할-일"><span class="n">17</span>지금 당장 사람이 할 일</a></li></ol></nav>
+  <nav class="toc"><ol><li><a href="#0-이-문서를-읽는-법"><span class="n">0</span>이 문서를 읽는 법</a></li><li><a href="#1-2026-08-10-기준-nvidia-스택-현황"><span class="n">1</span>2026-08-10 기준 NVIDIA 스택 현황</a></li><li><a href="#2-하드웨어-판독--당신의-pc가-실제로-무엇인가"><span class="n">2</span>하드웨어 판독 — 당신의 PC가 실제로 무엇인가</a></li><li><a href="#3-전체-시스템-구성도"><span class="n">3</span>전체 시스템 구성도</a></li><li><a href="#4-vram-24gb-예산-설계"><span class="n">4</span>VRAM 24GB 예산 설계</a></li><li><a href="#5-디스크와-디렉터리-레이아웃"><span class="n">5</span>디스크와 디렉터리 레이아웃</a></li><li><a href="#6-obsidian-완전-입문"><span class="n">6</span>Obsidian 완전 입문</a></li><li><a href="#7-notion-역할과-스키마"><span class="n">7</span>Notion 역할과 스키마</a></li><li><a href="#8-텔레그램-io와-pc-꺼짐-응답-설계"><span class="n">8</span>텔레그램 I/O와 &quot;PC 꺼짐&quot; 응답 설계</a></li><li><a href="#9-도메인-워크스페이스-스키마--환각-방지-규약"><span class="n">9</span>도메인 워크스페이스 스키마 — 환각 방지 규약</a></li><li><a href="#10-루프-엔지니어링--상태기계"><span class="n">10</span>루프 엔지니어링 — 상태기계</a></li><li><a href="#11-그래프-엔지니어링--도메인별-dag"><span class="n">11</span>그래프 엔지니어링 — 도메인별 DAG</a></li><li><a href="#12-자율성-경계"><span class="n">12</span>자율성 경계</a></li><li><a href="#13-단계별-구축-순서"><span class="n">13</span>단계별 구축 순서</a></li><li><a href="#14-필요-계정과-키-목록"><span class="n">14</span>필요 계정과 키 목록</a></li><li><a href="#15-검증된-것과-추정인-것"><span class="n">15</span>검증된 것과 추정인 것</a></li><li><a href="#16-다음-단계"><span class="n">16</span>다음 단계</a></li><li><a href="#17-지금-당장-사람이-할-일"><span class="n">17</span>지금 당장 사람이 할 일</a></li><li><a href="#18-문서-생애주기--이-설계서는-언제-버려지나"><span class="n">18</span>문서 생애주기 — 이 설계서는 언제 버려지나</a></li></ol></nav>
 </div></div></header>
 
 <section id="0-이-문서를-읽는-법"><div class="wrap"><div class="s-head"><span class="n">0</span><h2>이 문서를 읽는 법</h2></div><div class="col-wide"><div class="tw"><table>
@@ -62,6 +62,10 @@
 <tr>
 <td><strong>지금 당장 내가 뭘 해야 하나</strong></td>
 <td><a href="#17-지금-당장-사람이-할-일">§17</a> ← 여기부터</td>
+</tr>
+<tr>
+<td>세팅 끝난 뒤엔 뭘 보나</td>
+<td><a href="#18-문서-생애주기--이-설계서는-언제-버려지나">§18</a> — <strong>이 문서는 그때 폐기된다</strong></td>
 </tr>
 <tr>
 <td>뭐부터 깔면 되나</td>
@@ -1625,8 +1629,7 @@ minimum / good / ideal <strong>세 등급이 전부 같은 번호</strong>다 (L
 </tr>
 </tbody>
 </table></div>
-<p><strong>중요 — 드라이버 갈래를 잘못 고르면 안 된다.</strong> 이 GPU는 <code>RTX PRO 5000 Blackwell
-Laptop GPU</code>, 즉 <strong>프로 계열</strong>이다. GeForce Game Ready가 아니라
+<p><strong>중요 — 드라이버 갈래를 잘못 고르면 안 된다.</strong> 이 GPU는 <code>RTX PRO 5000 Blackwell Laptop GPU</code>, 즉 <strong>프로 계열</strong>이다. GeForce Game Ready가 아니라
 <strong>NVIDIA RTX / Quadro Enterprise 드라이버</strong>를 받아야 한다. 595.97은 이 계열의
 <strong>R595 Production Branch</strong> 빌드다 — Isaac Sim이 테스트한 버전이 애초에 프로 계열
 프로덕션 브랜치라는 뜻이고, 이 워크스테이션에 정확히 맞는 갈래다.</p>
@@ -2386,4 +2389,214 @@ Phase 0부터 순서대로 진행하되, 각 Phase의 &quot;✔ 확인&quot;을 
 </tr>
 </tbody>
 </table></div>
-<p>빠진 것들은 지워진 게 아니라 <strong>뒤로 밀렸다.</strong> 나중에 얹어도 앞 단계가 바뀌지 않도록 순서를 잡았다.</p></div></div></section>
+<p>빠진 것들은 지워진 게 아니라 <strong>뒤로 밀렸다.</strong> 나중에 얹어도 앞 단계가 바뀌지 않도록 순서를 잡았다.</p>
+<hr></div></div></section><section id="18-문서-생애주기--이-설계서는-언제-버려지나"><div class="wrap"><div class="s-head"><span class="n">18</span><h2>문서 생애주기 — 이 설계서는 언제 버려지나</h2></div><div class="col-wide"><p><strong>이 문서는 소모품이다.</strong> Phase 11이 끝나는 순간 §13(구축 순서)은 죽은 문서가 되고, 그 뒤로도 들고 있으면 낭비를 넘어 <strong>위험</strong>해진다. 에이전트가 "지난 계획"을 "현재 상태"로 착각하기 때문이다. 설계서에 <code>D:\agent</code>라고 적혀 있으면 실측이 아무리 <code>C:</code>라고 해도 언젠가는 헷갈린다.</p>
+<p>그래서 이 설계서는 <strong>보관되지 않는다. 분해되어 각자 다른 수명을 가진 문서로 흩어진다.</strong></p>
+<h3 id="181-문서의-세-계급">18.1 문서의 세 계급</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>계급</th>
+<th>예</th>
+<th>수명</th>
+<th>위치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>구축 문서</strong></td>
+<td>§13 Phase 0–11, §17, 사전 점검 리포트</td>
+<td><strong>세팅 완료 시 종료</strong></td>
+<td><code>90-meta/archive/2026-08-setup/</code> — 동결. 작업 컨텍스트에서 제외</td>
+</tr>
+<tr>
+<td><strong>상설 문서</strong></td>
+<td>도메인 계약, <strong>플로우 문서</strong>, 사실 카드</td>
+<td>계속 갱신</td>
+<td><code>10-domains/</code>, <code>20-facts/</code></td>
+</tr>
+<tr>
+<td><strong>사건 기록</strong></td>
+<td>런 리포트</td>
+<td>불변, 누적</td>
+<td><code>30-runs/</code></td>
+</tr>
+<tr>
+<td><strong>자동 생성</strong></td>
+<td><code>ENVIRONMENT.md</code></td>
+<td>주 1회 재생성</td>
+<td><code>90-meta/</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="182-설계서-각-절이-어디로-가나">18.2 설계서 각 절이 어디로 가나</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>이 문서의 절</th>
+<th>세팅 완료 후</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>§1 생태계 조사</td>
+<td><strong>사실 카드 + <code>40-refs/</code></strong> 로 분해. 버전이 바뀌면 만료</td>
+</tr>
+<tr>
+<td>§2 하드웨어, §4 VRAM, §5 디스크</td>
+<td><strong><code>ENVIRONMENT.md</code>로 대체.</strong> 계획이 아니라 실측이므로 자동 생성한다</td>
+</tr>
+<tr>
+<td>§3 구성도, §6 Obsidian, §7 Notion, §8 텔레그램</td>
+<td><strong><code>90-meta/architecture.md</code></strong> — 구조가 바뀔 때만 손댄다</td>
+</tr>
+<tr>
+<td>§9 워크스페이스 스키마, §10 루프 규약, §12 게이트</td>
+<td><strong>도메인 <code>CLAUDE.md</code>로 이주.</strong> 여기가 실제로 강제되는 자리다</td>
+</tr>
+<tr>
+<td>§11 도메인별 DAG</td>
+<td><strong>플로우 문서로 분해</strong> (§18.3)</td>
+</tr>
+<tr>
+<td>§13 구축 순서, §17 사람 할 일, §15 실측</td>
+<td><strong>아카이브.</strong> 재구축할 때만 꺼낸다</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Phase 11의 마지막 작업이 이 분해다.</strong> 끝나면 이 설계서는 <code>90-meta/archive/</code>로 들어가고, 일상 작업에서 다시 열리지 않는다.</p>
+<h3 id="183-플로우-문서--상설-문서의-핵심-단위">18.3 플로우 문서 — 상설 문서의 핵심 단위</h3>
+<p>당신이 물은 "각 프로세스나 플로우마다 MD"가 이것이다. <strong>플로우 하나 = 문서 하나</strong>, 그 안에 설계·구현·검증이 다 들어간다.</p>
+<div class="term"><div class="term-bar"><span class="dot"></span>text</div><pre>10-domains/10-cad2sim/flows/FLOW-CAD-001-dxf-to-simready.md</pre></div>
+<div class="term"><div class="term-bar"><span class="dot"></span>markdown</div><pre>---
+id: FLOW-CAD-001
+domain: 10-cad2sim
+title: DXF 단품 도면 -&gt; SimReady USD
+status: production          # draft | production | deprecated
+graph: conductor/graphs/cad2sim.yaml
+runs_total: 13
+runs_passed: 12
+last_verified: 2026-08-15
+last_run: &quot;[[RUN-20260815-1102-bracket]]&quot;
+---
+
+## 1. 목적
+2D DXF 단품 도면을 물리 시뮬레이션 가능한 SimReady 자산으로 만든다.
+
+## 2. 입출력 계약
+| | |
+|---|---|
+| 입력 | `.dxf` 1개, 폐곡선 외곽 + 선택적 구멍 |
+| 필수 옵션 | 두께(m). 단위가 도면에 없으면 `DXF_UNITS` |
+| 출력 | `&lt;name&gt;.usd` (crate), 질량·콜라이더·머티리얼 포함 |
+| 실패 시 | 런 폴더 동결 + 원문 로그. 부분 산출물은 신뢰하지 않는다 |
+
+## 3. 그래프
+inspect -&gt; convert -&gt; usd-validate -&gt; simready-baseline -&gt; conform
+       -&gt; usd-revalidate -&gt; simready-revalidate -&gt; sim-check -&gt; export
+
+## 4. 검증 기준 (측정 가능한 것만)
+- `run_pipeline.sh` exit = 0
+- SimReady 프로파일 전 항목 PASS
+- `sim_check.py` 120스텝: NaN 0, 관통 0
+- 워터타이트: 모든 무향 엣지가 정확히 2회
+
+## 5. 알려진 실패 모드          &lt;-- 이 절이 진짜 자산이다
+| 증상 | 원인 | 조치 | 최초 관측 |
+|---|---|---|---|
+| ManifoldChecker 경고인데 exit 1 | 구멍 루프를 두 번 뒤집음 | 벽 생성은 한 공식만 | [[RUN-20260712-...]] |
+| `.usdc`에서 빈 `{}` 리포트 | simready-validate가 crate 미지원 | `--format auto` | [[RUN-20260714-...]] |
+| FET004 실패 | Prop-* 프로파일이 강체 2개 요구 | `Prop-Static-Neutral` | [[RUN-20260716-...]] |
+
+## 6. 최근 실행
+```dataview
+TABLE status, duration, file.link FROM &quot;30-runs&quot; WHERE flow = &quot;FLOW-CAD-001&quot;
+SORT date DESC LIMIT 10
+```
+
+## 7. 변경 이력
+- 2026-08-15 체이닝 허용 오차 기본값 조정</pre></div>
+<p><strong>5절이 시간이 갈수록 값이 커지는 유일한 부분이다.</strong> 진단한 실패는 전부 여기 한 줄이 된다. 다음에 같은 증상이 나오면 에이전트가 재발명하지 않는다. <strong>이게 1년 차보다 2년 차가 나아지는 유일한 메커니즘이다.</strong></p>
+<p>플로우 문서를 만드는 시점은 <strong>그 플로우가 두 번째로 성공했을 때</strong>다. 한 번 성공은 우연일 수 있고, 미리 쓰면 실행되지 않는 계획서가 하나 더 늘 뿐이다.</p>
+<h3 id="184-런-리포트에는-그림이-있어야-한다">18.4 런 리포트에는 그림이 있어야 한다</h3>
+<p><code>0.31% 드리프트</code>라는 숫자만으로는 아무도 판단하지 못한다. <strong>REPORT 단계는 시각 자료를 최소 1개 첨부해야 하며, 이건 권장이 아니라 규칙이다.</strong></p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>런 종류</th>
+<th>필수 첨부</th>
+<th>생성 방법</th>
+<th>비용</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>물리 실험</td>
+<td>지표 시계열 <strong>플롯 PNG</strong></td>
+<td>CSV → matplotlib (<code>make_figures.py</code>)</td>
+<td>CPU. 항상 가능</td>
+</tr>
+<tr>
+<td>지오메트리 생성</td>
+<td><strong>와이어프레임/솔리드 캡처</strong></td>
+<td>USD → 오프스크린 렌더</td>
+<td>소량 GPU</td>
+</tr>
+<tr>
+<td>파라미터 스윕</td>
+<td><strong>비교 곡선 1장</strong></td>
+<td>matplotlib</td>
+<td>CPU</td>
+</tr>
+<tr>
+<td>동역학·유체</td>
+<td><strong>MP4 클립</strong> (2–10초)</td>
+<td>Isaac Sim 무비 캡처</td>
+<td>GPU. SIM 모드에서만</td>
+</tr>
+<tr>
+<td>디지털 트윈</td>
+<td><strong>트랙 오버레이 프레임</strong></td>
+<td>DeepStream 출력</td>
+<td>GPU</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>모드에 따라 갈린다.</strong> HEADLESS 모드에서는 플롯만 만든다 — 렌더는 VRAM을 먹어 §4의 예산을 깨뜨린다. MP4가 필요하면 SIM 모드로 올려야 하고, 그건 Conductor가 PREFLIGHT에서 판단한다.</p>
+<p>Obsidian은 이미지도 MP4도 그대로 렌더한다. 런 리포트는 이렇게 끝난다:</p>
+<div class="term"><div class="term-bar"><span class="dot"></span>markdown</div><pre>## 결과
+![[RUN-20260815-1102/energy-drift.png]]
+![[RUN-20260815-1102/sim-clip.mp4]]
+
+에너지 드리프트 0.31% (임계 2%). 관통 0건.</pre></div>
+<p><code>30-runs/</code>가 무거워지므로 보존 정책을 둔다: <strong>PNG는 영구, MP4는 90일 후 실패 런만 남기고 삭제.</strong> 성공한 실험의 영상은 재현 가능하므로 보관 가치가 낮다.</p>
+<h3 id="185-environmentmd--계획이-아니라-현재-상태">18.5 <code>ENVIRONMENT.md</code> — 계획이 아니라 현재 상태</h3>
+<p>설계서의 하드웨어·경로·버전 절을 대체한다. <strong>사람이 쓰지 않는다. Conductor가 주 1회 실측해서 덮어쓴다.</strong></p>
+<div class="term"><div class="term-bar"><span class="dot"></span>markdown</div><pre>&lt;!-- 자동 생성: 2026-08-17 03:00. 직접 수정하지 마라 --&gt;
+| 항목 | 값 | 확인 명령 |
+|---|---|---|
+| GPU / 드라이버 | RTX PRO 5000 Blackwell Laptop / 596.36 | `nvidia-smi` |
+| Isaac Sim | 6.0.1 (Kit 110.1.2) | `isaac-sim.bat --version` |
+| Python (ov) | 3.11.9, usd-exchange 설치됨 | `.venv-ov\Scripts\python -V` |
+| 디스크 C: | 1,402 GB 여유 | `Get-PSDrive C` |
+| 현재 모드 | HEADLESS | `conductor status` |</pre></div>
+<p>설계서가 "이렇게 만들 것"이라고 적힌 문서라면, 이건 "지금 이렇다"가 적힌 문서다. <strong>에이전트는 후자만 믿는다.</strong></p>
+<h3 id="186-요약--무엇이-남고-무엇이-사라지나">18.6 요약 — 무엇이 남고 무엇이 사라지나</h3>
+<pre class="mermaid">flowchart LR
+    D[&quot;07-agent-pc-design.md&lt;br/&gt;1,700줄&lt;br/&gt;구축용 소모품&quot;]
+
+    D --&gt; A[&quot;90-meta/archive/&lt;br/&gt;Phase 0-11, 사전점검&lt;br/&gt;동결&quot;]
+    D --&gt; B[&quot;도메인 CLAUDE.md x5&lt;br/&gt;루프 규약 · 게이트 · 격리&lt;br/&gt;상설&quot;]
+    D --&gt; C[&quot;90-meta/architecture.md&lt;br/&gt;구성도 · 채널&lt;br/&gt;구조 변경 시만&quot;]
+    D --&gt; E[&quot;ENVIRONMENT.md&lt;br/&gt;주 1회 자동 생성&quot;]
+    D --&gt; F[&quot;20-facts/&lt;br/&gt;사실 카드&lt;br/&gt;만료 관리&quot;]
+
+    B --&gt; G[&quot;flows/FLOW-*.md&lt;br/&gt;플로우당 1개&lt;br/&gt;실패 모드가 누적&quot;]
+    G --&gt; H[&quot;30-runs/RUN-*.md&lt;br/&gt;그림·영상 포함&lt;br/&gt;불변 누적&quot;]
+    H -.-&gt;|&quot;실패 진단이&lt;br/&gt;5절로&quot;| G
+
+    style D fill:#9e9e9e,color:#fff
+    style A fill:#616161,color:#fff
+    style G fill:#7b1fa2,color:#fff
+    style H fill:#2e7d32,color:#fff</pre>
+<p><strong>H → G 점선이 이 시스템의 학습 고리다.</strong> 런에서 진단한 실패가 플로우 문서의 실패 모드 표로 올라가고, 다음 런이 그걸 읽는다. 이 화살표가 없으면 매번 같은 실수를 반복하는 자동화일 뿐이다.</p></div></div></section>
