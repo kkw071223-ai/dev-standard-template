@@ -719,35 +719,84 @@
     C-&gt;&gt;V: 검증 실행 (Claude가 아니라 Conductor가)
     V--&gt;&gt;C: exit 0 / result.json
     C-&gt;&gt;P: §8.5 포맷 리포트</pre>
-<p>이 사슬에서 <strong>Conductor가 Claude Code를 프로세스로 띄울 수 있어야</strong> 한다. 그래서 CLI가 필수다.</p>
+<p><strong>먼저 이유가 <em>아닌</em> 것부터.</strong> CLI가 파일에 더 접근할 수 있어서가 아니다. VS Code 확장도 로컬 파일을 똑같이 읽고 쓰고 명령을 실행한다. 권한 범위는 동일하다.</p>
+<p><strong>진짜 이유는 "누가 시작하고, 결과가 어떻게 돌아오는가"다.</strong> Conductor에게 필요한 건 넷이다.</p>
 <div class="tw"><table>
 <thead>
 <tr>
-<th>형태</th>
-<th>프로그램으로 호출 가능?</th>
-<th>이 설계에서</th>
+<th>#</th>
+<th>Conductor에게 필요한 것</th>
+<th>CLI</th>
+<th>VS Code 확장</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Claude Code CLI</strong></td>
-<td>✅ <code>claude -p "..." --output-format stream-json</code></td>
-<td><strong>필수.</strong> 자동화의 유일한 경로</td>
+<td>1</td>
+<td><strong>사람 없이 실행 시작</strong> — 새벽 3시 정기 잡, 텔레그램 수신 시점</td>
+<td>✅ 프로세스 하나 띄우면 끝</td>
+<td>❌ 에디터 창이 떠 있고 누가 입력해야 함</td>
 </tr>
 <tr>
-<td><strong>VS Code 확장</strong></td>
-<td>❌ 에디터가 열려 있어야 하고 사람이 앉아 있어야 함</td>
-<td>권장 — 당신이 직접 작업할 때. 내부적으로 같은 Claude Code다</td>
+<td>2</td>
+<td><strong>기계가 읽는 결과</strong> — <code>result.json</code>을 채우려면 구조화 출력이 필요</td>
+<td>✅ <code>--output-format stream-json</code> → JSON 라인</td>
+<td>❌ 결과가 UI 패널에 그려짐. 밖으로 빼는 공식 경로 없음</td>
 </tr>
 <tr>
-<td><strong>Claude Desktop</strong></td>
-<td>❌ 대화만 가능. 셸 실행 불가</td>
-<td>설계에서 역할 없음</td>
+<td>3</td>
+<td><strong>종료 코드</strong> — §10의 VERIFY 분기가 exit code로 갈린다</td>
+<td>✅ 프로세스 종료 코드</td>
+<td>❌ UI 패널에는 종료 코드가 없다</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>잡마다 다른 cwd</strong> — 도메인 격리(§9.1)의 전제</td>
+<td>✅ 잡마다 도메인 폴더에서 기동</td>
+<td>❌ 창의 워크스페이스 폴더에 묶임</td>
 </tr>
 </tbody>
 </table></div>
-<p>무인 실행이므로 CLI 호출에는 <code>--allowedTools</code>와 <code>--permission-mode</code>를 함께 준다. 이게 없으면 권한 프롬프트에서 멈춰 서고, 폰에서는 그걸 눌러줄 방법이 없다. 승인이 필요한 건 §12의 두 게이트뿐이며, 그건 Conductor가 텔레그램으로 물어본다.</p>
-<div class="note"><p><strong>CLI와 VS Code 확장은 택일이 아니다.</strong> 확장은 CLI 위에 얹힌 UI이고, 둘 다 같은 Max 구독으로 인증한다. CLI를 깔고, 앉아서 작업할 때 쓰려면 확장도 깐다.</p></div>
+<p>한 줄로 줄이면: <strong>확장은 사람이 앉는 책상이고, CLI는 코드가 호출하는 함수다.</strong> 접근 권한이 아니라 호출 가능성의 문제다.</p>
+<div class="note"><p><strong>그리고 이건 텔레그램 때문이 아니다.</strong> 텔레그램을 아예 빼도 CLI는 필요하다 — §10의 재시도 루프(PATCH 후 재실행), 매일 03:00 <code>40-brain</code> 야간 잡, 실행과 분리된 검증 단계가 전부 "사람 없이 실행 시작"을 요구한다. 텔레그램은 트리거 하나일 뿐이다.</p>
+<p><strong>반대로 솔직히 말하면:</strong> 자율 루프를 포기하고 "앉아서 AI와 같이 코딩"만 할 거라면 <strong>VS Code 확장만으로 충분하고 CLI는 필요 없다.</strong> CLI 요구는 "상시 가동 자율 에이전트"에서 나온 것이지 텔레그램에서 나온 게 아니다.</p></div>
+<h3 id="검토했지만-채택하지-않은-대안--claude-agent-sdk">검토했지만 채택하지 않은 대안 — Claude Agent SDK</h3>
+<p>프로그램 호출 경로가 CLI만 있는 건 아니다. <strong>Claude Agent SDK</strong>(Python / TypeScript)로 Conductor 안에서 직접 호출할 수도 있다. 그런데 인증이 걸린다.</p>
+<div class="tw"><table>
+<thead>
+<tr>
+<th></th>
+<th>Claude Code CLI</th>
+<th>Agent SDK</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>인증</td>
+<td>Max 구독 (브라우저 OAuth)</td>
+<td><strong>문서상 API 키</strong> (<code>ANTHROPIC_API_KEY</code>)</td>
+</tr>
+<tr>
+<td>과금</td>
+<td>구독 내</td>
+<td><strong>종량과금</strong></td>
+</tr>
+<tr>
+<td>이 설계에서</td>
+<td>✅ 채택</td>
+<td>❌ 결제수단 제약에 걸림</td>
+</tr>
+</tbody>
+</table></div>
+<p>Anthropic은 구독 OAuth를 Claude Code와 claude.ai <strong>바깥의 서드파티 도구에서 쓰는 것을 금지</strong>한다. Conductor가 <strong>공식 CLI를 프로세스로 띄우는 것은 그냥 Claude Code를 쓰는 것</strong>이므로 여기에 해당하지 않는다 — headless 모드는 문서화된 정식 기능이고, cron에서 <code>claude -p</code>를 돌리는 것도 공식 용법이다.</p>
+<div class="note warn"><p>⚠ <strong>넘지 말아야 할 선:</strong> OAuth 토큰을 꺼내서 다른 도구나 SDK에 먹이는 것. 그건 금지 대상이다. Conductor는 <strong>토큰을 만지지 않고 CLI 프로세스만 띄운다.</strong> 이 구분이 설계가 구독 안에서 굴러가는 근거다.</p></div>
+<h3 id="무인-실행-시-반드시-붙이는-플래그">무인 실행 시 반드시 붙이는 플래그</h3>
+<div class="term"><div class="term-bar"><span class="dot"></span>powershell</div><pre>claude -p &quot;&lt;잡 프롬프트&gt;&quot; `
+  --output-format stream-json `
+  --permission-mode acceptEdits `
+  --allowedTools &quot;Read,Write,Edit,Bash,Glob,Grep&quot;</pre></div>
+<p>권한을 미리 열어두지 않으면 프롬프트에서 멈춰 서고, <strong>폰에서는 그걸 눌러줄 방법이 없다.</strong> 승인이 필요한 건 §12의 두 게이트(유료 API·PR)뿐이며, 그건 Conductor가 텔레그램으로 묻는다.</p>
+<div class="note"><p><strong>CLI와 VS Code 확장은 택일이 아니다.</strong> 둘 다 같은 Max 구독으로 인증한다. Conductor는 CLI를 쓰고, 당신이 PC 앞에 앉을 때는 확장을 쓴다. 같이 깐다.</p></div>
 <hr></div></div></section><section id="4-vram-24gb-예산-설계"><div class="wrap"><div class="s-head"><span class="n">4</span><h2>VRAM 24GB 예산 설계</h2></div><div class="col-wide"><p>24GB는 <strong>Isaac Sim GUI + 로컬 LLM 동시 상주가 안 되는 크기</strong>다. 그래서 모드로 나눈다.</p>
 <h3 id="41-소비량-추정">4.1 소비량 추정</h3>
 <div class="tw"><table>
@@ -2138,6 +2187,18 @@ wsl bash -lc &quot;cd /mnt/d/agent/repos/dev-standard-template &amp;&amp; ./scri
 <tr>
 <td>Claude Code 무인 실행: <code>claude -p</code>, <code>--output-format text\|json\|stream-json</code>, <code>--allowedTools</code> / <code>--permission-mode</code>로 권한 프롬프트 회피</td>
 <td>Claude Code headless 문서</td>
+</tr>
+<tr>
+<td>Claude Code의 문서화된 자동화 경로는 <strong>CLI headless와 Agent SDK 둘뿐</strong>이다. VS Code 확장을 외부 프로세스가 구동하는 공식 경로는 없다</td>
+<td>Claude Code 문서</td>
+</tr>
+<tr>
+<td><strong>Agent SDK의 문서상 인증은 API 키</strong>(<code>ANTHROPIC_API_KEY</code>)이며 종량과금이다</td>
+<td>platform.claude.com/docs/en/agent-sdk</td>
+</tr>
+<tr>
+<td>Anthropic은 구독 OAuth를 <strong>Claude Code와 claude.ai 바깥의 서드파티 도구에서 쓰는 것을 금지</strong>한다 (§3.2의 선)</td>
+<td>Anthropic 정책</td>
 </tr>
 <tr>
 <td><strong>텔레그램은 봇이 받아가지 않은 업데이트를 최대 24시간 보관한다</strong> — <em>"they will not be kept longer than 24 hours"</em></td>

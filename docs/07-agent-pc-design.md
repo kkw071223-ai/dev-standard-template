@@ -237,17 +237,49 @@ sequenceDiagram
     C->>P: §8.5 포맷 리포트
 ```
 
-이 사슬에서 **Conductor가 Claude Code를 프로세스로 띄울 수 있어야** 한다. 그래서 CLI가 필수다.
+**먼저 이유가 *아닌* 것부터.** CLI가 파일에 더 접근할 수 있어서가 아니다. VS Code 확장도 로컬 파일을 똑같이 읽고 쓰고 명령을 실행한다. 권한 범위는 동일하다.
 
-| 형태 | 프로그램으로 호출 가능? | 이 설계에서 |
+**진짜 이유는 "누가 시작하고, 결과가 어떻게 돌아오는가"다.** Conductor에게 필요한 건 넷이다.
+
+| # | Conductor에게 필요한 것 | CLI | VS Code 확장 |
+|---|---|---|---|
+| 1 | **사람 없이 실행 시작** — 새벽 3시 정기 잡, 텔레그램 수신 시점 | ✅ 프로세스 하나 띄우면 끝 | ❌ 에디터 창이 떠 있고 누가 입력해야 함 |
+| 2 | **기계가 읽는 결과** — `result.json`을 채우려면 구조화 출력이 필요 | ✅ `--output-format stream-json` → JSON 라인 | ❌ 결과가 UI 패널에 그려짐. 밖으로 빼는 공식 경로 없음 |
+| 3 | **종료 코드** — §10의 VERIFY 분기가 exit code로 갈린다 | ✅ 프로세스 종료 코드 | ❌ UI 패널에는 종료 코드가 없다 |
+| 4 | **잡마다 다른 cwd** — 도메인 격리(§9.1)의 전제 | ✅ 잡마다 도메인 폴더에서 기동 | ❌ 창의 워크스페이스 폴더에 묶임 |
+
+한 줄로 줄이면: **확장은 사람이 앉는 책상이고, CLI는 코드가 호출하는 함수다.** 접근 권한이 아니라 호출 가능성의 문제다.
+
+> **그리고 이건 텔레그램 때문이 아니다.** 텔레그램을 아예 빼도 CLI는 필요하다 — §10의 재시도 루프(PATCH 후 재실행), 매일 03:00 `40-brain` 야간 잡, 실행과 분리된 검증 단계가 전부 "사람 없이 실행 시작"을 요구한다. 텔레그램은 트리거 하나일 뿐이다.
+>
+> **반대로 솔직히 말하면:** 자율 루프를 포기하고 "앉아서 AI와 같이 코딩"만 할 거라면 **VS Code 확장만으로 충분하고 CLI는 필요 없다.** CLI 요구는 "상시 가동 자율 에이전트"에서 나온 것이지 텔레그램에서 나온 게 아니다.
+
+### 검토했지만 채택하지 않은 대안 — Claude Agent SDK
+
+프로그램 호출 경로가 CLI만 있는 건 아니다. **Claude Agent SDK**(Python / TypeScript)로 Conductor 안에서 직접 호출할 수도 있다. 그런데 인증이 걸린다.
+
+| | Claude Code CLI | Agent SDK |
 |---|---|---|
-| **Claude Code CLI** | ✅ `claude -p "..." --output-format stream-json` | **필수.** 자동화의 유일한 경로 |
-| **VS Code 확장** | ❌ 에디터가 열려 있어야 하고 사람이 앉아 있어야 함 | 권장 — 당신이 직접 작업할 때. 내부적으로 같은 Claude Code다 |
-| **Claude Desktop** | ❌ 대화만 가능. 셸 실행 불가 | 설계에서 역할 없음 |
+| 인증 | Max 구독 (브라우저 OAuth) | **문서상 API 키** (`ANTHROPIC_API_KEY`) |
+| 과금 | 구독 내 | **종량과금** |
+| 이 설계에서 | ✅ 채택 | ❌ 결제수단 제약에 걸림 |
 
-무인 실행이므로 CLI 호출에는 `--allowedTools`와 `--permission-mode`를 함께 준다. 이게 없으면 권한 프롬프트에서 멈춰 서고, 폰에서는 그걸 눌러줄 방법이 없다. 승인이 필요한 건 §12의 두 게이트뿐이며, 그건 Conductor가 텔레그램으로 물어본다.
+Anthropic은 구독 OAuth를 Claude Code와 claude.ai **바깥의 서드파티 도구에서 쓰는 것을 금지**한다. Conductor가 **공식 CLI를 프로세스로 띄우는 것은 그냥 Claude Code를 쓰는 것**이므로 여기에 해당하지 않는다 — headless 모드는 문서화된 정식 기능이고, cron에서 `claude -p`를 돌리는 것도 공식 용법이다.
 
-> **CLI와 VS Code 확장은 택일이 아니다.** 확장은 CLI 위에 얹힌 UI이고, 둘 다 같은 Max 구독으로 인증한다. CLI를 깔고, 앉아서 작업할 때 쓰려면 확장도 깐다.
+> ⚠ **넘지 말아야 할 선:** OAuth 토큰을 꺼내서 다른 도구나 SDK에 먹이는 것. 그건 금지 대상이다. Conductor는 **토큰을 만지지 않고 CLI 프로세스만 띄운다.** 이 구분이 설계가 구독 안에서 굴러가는 근거다.
+
+### 무인 실행 시 반드시 붙이는 플래그
+
+```powershell
+claude -p "<잡 프롬프트>" `
+  --output-format stream-json `
+  --permission-mode acceptEdits `
+  --allowedTools "Read,Write,Edit,Bash,Glob,Grep"
+```
+
+권한을 미리 열어두지 않으면 프롬프트에서 멈춰 서고, **폰에서는 그걸 눌러줄 방법이 없다.** 승인이 필요한 건 §12의 두 게이트(유료 API·PR)뿐이며, 그건 Conductor가 텔레그램으로 묻는다.
+
+> **CLI와 VS Code 확장은 택일이 아니다.** 둘 다 같은 Max 구독으로 인증한다. Conductor는 CLI를 쓰고, 당신이 PC 앞에 앉을 때는 확장을 쓴다. 같이 깐다.
 
 ---
 
@@ -1450,6 +1482,9 @@ wsl bash -lc "cd /mnt/d/agent/repos/dev-standard-template && \
 | **샌드박싱은 WSL2에서만 지원, 네이티브 Windows 미지원** | 동 |
 | WSL2에 리눅스 NVIDIA 드라이버 설치 금지. `cuda`/`cuda-drivers` 메타패키지 금지, `cuda-toolkit-12-x`만 | docs.nvidia.com/cuda/wsl-user-guide |
 | Claude Code 무인 실행: `claude -p`, `--output-format text\|json\|stream-json`, `--allowedTools` / `--permission-mode`로 권한 프롬프트 회피 | Claude Code headless 문서 |
+| Claude Code의 문서화된 자동화 경로는 **CLI headless와 Agent SDK 둘뿐**이다. VS Code 확장을 외부 프로세스가 구동하는 공식 경로는 없다 | Claude Code 문서 |
+| **Agent SDK의 문서상 인증은 API 키**(`ANTHROPIC_API_KEY`)이며 종량과금이다 | platform.claude.com/docs/en/agent-sdk |
+| Anthropic은 구독 OAuth를 **Claude Code와 claude.ai 바깥의 서드파티 도구에서 쓰는 것을 금지**한다 (§3.2의 선) | Anthropic 정책 |
 | **텔레그램은 봇이 받아가지 않은 업데이트를 최대 24시간 보관한다** — *"they will not be kept longer than 24 hours"* | core.telegram.org/bots/api#getupdates |
 | **`getUpdates`와 `setWebhook`은 동시 사용 불가** — *"You will not be able to receive updates using getUpdates for as long as an outgoing webhook is set up"* | 동 |
 | **Hermes는 Nous Research**의 에이전트 하네스다 (NVIDIA 제품 아님). 쓸수록 스스로 메모리·스킬을 축적 | github.com/nousresearch/hermes-agent, NVIDIA 기술블로그 |
