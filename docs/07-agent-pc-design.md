@@ -1038,9 +1038,8 @@ flowchart TD
 
 # 0-1. GPU 드라이버 — 실측 591.66, 필요 595.97+. 이게 유일한 블로커다.
 nvidia-smi
-#   미만이면 NVIDIA 앱 또는 nvidia.com에서 RTX PRO 5000 Blackwell Laptop GPU용
-#   최신 드라이버를 받아 설치하고 재부팅한다. Studio/Production Branch 권장.
-#   Phase 5a까지는 이거 없이도 진행되므로 병렬로 처리해도 된다.
+#   갱신 절차는 아래 "0-1 상세"를 따른다. Phase 5a까지는 이거 없이도
+#   진행되므로 병렬로 처리해도 된다.
 
 # 0-2. 절전 금지 + 뚜껑 닫아도 계속 돌게
 #   평소: AC 연결 + 뚜껑 열림 + 상시 가동.
@@ -1082,6 +1081,60 @@ New-Item -ItemType Directory -Force -Path $env:USERPROFILE\.agent
 #   (Phase 6에서 Isaac Sim을 깐 뒤에 등록한다. 지금은 경로가 없다.)
 start ms-settings:display-advancedgraphics
 ```
+
+#### 0-1 상세 — 드라이버 갱신
+
+**Isaac Sim 6.0.1이 요구하는 버전은 Windows `595.97` 하나뿐이다.** 공식 요구사항 표에서
+minimum / good / ideal **세 등급이 전부 같은 번호**다 (Linux는 `595.58.03`). 문서는 이것이
+"테스트된 버전이지 최신 버전은 아니다"라고 명시한다.
+
+| 등급 | Windows 드라이버 |
+|---|---|
+| Minimum | **595.97** |
+| Good (권장) | **595.97** |
+| Ideal | **595.97** |
+
+**중요 — 드라이버 갈래를 잘못 고르면 안 된다.** 이 GPU는 `RTX PRO 5000 Blackwell
+Laptop GPU`, 즉 **프로 계열**이다. GeForce Game Ready가 아니라
+**NVIDIA RTX / Quadro Enterprise 드라이버**를 받아야 한다. 595.97은 이 계열의
+**R595 Production Branch** 빌드다 — Isaac Sim이 테스트한 버전이 애초에 프로 계열
+프로덕션 브랜치라는 뜻이고, 이 워크스테이션에 정확히 맞는 갈래다.
+
+같은 R595 프로덕션 브랜치의 후속 릴리스(596.x대)도 있다. 둘 다 595.97 이상이므로
+요구사항은 충족한다.
+
+| 선택 | 근거 |
+|---|---|
+| **595.97 정확히** | Isaac Sim이 실제로 테스트한 버전. 놀랄 일이 가장 적다. **1순위** |
+| R595 브랜치의 최신 596.x | 같은 프로덕션 브랜치 + 이후 수정 반영. 595.97을 못 구할 때 |
+
+> ⚠ 596.x 버전 번호들은 드라이버 추적 사이트에서 얻은 것이라 **확정이 아니다.**
+> NVIDIA 공식 다운로드 페이지에서 실제 목록을 확인하고 고른다. 반면 `595.97`
+> 요구값은 Isaac Sim 공식 문서에서 확인한 값이다.
+
+**받는 방법 — 셋 중 하나**
+
+1. **NVIDIA 앱** (가장 쉬움): 설치 후 드라이버 탭. 단 프로 계열은 앱이 엔터프라이즈
+   드라이버를 안 보여줄 수 있다. 안 보이면 2번.
+2. **수동 다운로드** — nvidia.com/drivers 에서 이렇게 고른다:
+   - Product Type: **NVIDIA RTX / Quadro**
+   - Product Series: **NVIDIA RTX PRO Blackwell Series (Notebooks)**
+   - Product: **RTX PRO 5000 Blackwell Laptop GPU**
+   - OS: Windows 11, Download Type: **Production Branch / Studio**
+3. **OEM 폴백**: 위 설치 프로그램이 "호환되는 하드웨어를 찾을 수 없다"며 거부하면
+   노트북 제조사가 드라이버를 커스터마이즈한 경우다. 제조사 지원 페이지에서 받는다.
+
+**설치할 때**
+- **AC 연결 상태에서** 한다. 배터리 모드에서 드라이버 설치는 하지 않는다.
+- 사용자 지정 설치 → **깨끗한 설치 수행** 체크. 591.66 잔여 설정을 지운다.
+- 설치 중 화면이 몇 번 깜빡이고 검게 되는 것은 정상이다.
+- 끝나면 **재부팅**한다.
+
+**설치 후 반드시 다시 볼 것**
+- `nvidia-smi` → Driver Version이 595.97 이상
+- **하이브리드 그래픽 설정이 초기화됐는지 확인** (0-6). 드라이버 재설치가 앱별
+  GPU 지정을 되돌리는 경우가 있다.
+- 전원 정책(0-2)도 함께 확인한다. 일부 OEM 드라이버 패키지가 전원 계획을 건드린다.
 
 **✔ 확인**
 ```powershell
@@ -1523,7 +1576,8 @@ wsl bash -lc "cd /mnt/d/agent/repos/dev-standard-template && \
 | Isaac Sim 6.0.1 Windows 설치는 zip 해제 → `post_install.bat` → `isaac-sim.bat` | docs.isaacsim.omniverse.nvidia.com/6.0.1/installation/install_workstation.html |
 | Windows zip URL과 MD5 `c7fa3a830b251f10305cd7883039df9b` | 동 download.html |
 | 에셋 완전팩은 5분할 zip | 동 download.html |
-| 최소 RTX 4080 / 16GB VRAM / **드라이버 595.97** / 32GB RAM, 권장 RTX 5080 / 64GB, 이상적 RTX PRO 6000 Blackwell 48GB | 동 requirements |
+| 최소 RTX 4080 / 16GB VRAM / 32GB RAM, 권장 RTX 5080 / 64GB, 이상적 RTX PRO 6000 Blackwell 48GB | 동 requirements |
+| **드라이버는 세 등급 모두 동일**: Windows `595.97`, Linux `595.58.03`. 문서가 "테스트된 버전이지 최신은 아니다"라고 명시 | 동 requirements |
 | Claude Code Windows 설치 = `irm https://claude.ai/install.ps1 \| iex` 또는 winget `Anthropic.ClaudeCode` | Claude Code 공식 문서 |
 | **샌드박싱은 WSL2에서만 지원, 네이티브 Windows 미지원** | 동 |
 | WSL2에 리눅스 NVIDIA 드라이버 설치 금지. `cuda`/`cuda-drivers` 메타패키지 금지, `cuda-toolkit-12-x`만 | docs.nvidia.com/cuda/wsl-user-guide |
@@ -1580,6 +1634,7 @@ wsl bash -lc "cd /mnt/d/agent/repos/dev-standard-template && \
 | ⚠ Ollama 모델 태그 이름 | `ollama list` / 레지스트리 |
 | ⚠ Isaac Sim 첫 기동 셰이더 컴파일 10~30분 | 실측 |
 | ⚠ VS Code 확장 ID `anthropic.claude-code` | 마켓플레이스에서 확인 |
+| ⚠ 595.97 = RTX/Quadro Enterprise **R595 Production Branch**이고 후속으로 596.x대가 있다는 것 | 드라이버 추적 사이트 출처. **`595.97` 요구값 자체는 공식 확인**이지만 브랜치 계보와 596.x 번호는 NVIDIA 공식 다운로드 페이지에서 재확인할 것 |
 
 > **1차 점검 스크립트의 로케일 버그 2건은 정직하게 남긴다.** 한국어 Windows에서 `powercfg`와 `winget`의 출력이 현지화되는데 영어 문자열로 매칭했다. 전자는 빈 결과에 포맷 연산자가 예외를 던져 세 줄이 통째로 사라졌고, 후자는 멀쩡한 패키지 10개를 전부 "없음"으로 보고했다. **둘 다 "확인했다"가 아니라 "확인 못 했다"로 취급해야 한다.** 스크립트는 hex 인덱스와 종료 코드를 쓰도록 고쳤다.
 

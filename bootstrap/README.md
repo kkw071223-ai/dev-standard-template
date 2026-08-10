@@ -27,15 +27,36 @@
 
 ## ① GPU 드라이버 갱신 — 유일한 블로커
 
-Isaac Sim 6.0.1은 **595.97 이상**을 요구하는데 현재 591.66이다.
+현재 **591.66**, Isaac Sim 6.0.1이 요구하는 값은 **595.97**이다. 공식 요구사항
+표에서 minimum / good / ideal 세 등급이 **전부 같은 번호**이고, 문서는 이것이
+"테스트된 버전"이라고 명시한다. 즉 **목표는 595.97 하나**다.
 
-NVIDIA 앱 또는 nvidia.com에서 RTX PRO 5000 Blackwell Laptop GPU용 최신
-드라이버를 받아 설치한다. Studio/Production Branch 쪽이 시뮬레이션 워크로드에
-더 안정적이다.
+**갈래를 틀리면 안 된다.** 이 GPU는 프로 계열(RTX PRO)이므로 GeForce Game Ready가
+아니라 **NVIDIA RTX / Quadro Enterprise** 드라이버를 받아야 한다. 595.97 자체가
+이 계열의 R595 Production Branch 빌드다.
+
+nvidia.com/drivers 에서:
+
+| 항목 | 고를 값 |
+|---|---|
+| Product Type | **NVIDIA RTX / Quadro** |
+| Product Series | **NVIDIA RTX PRO Blackwell Series (Notebooks)** |
+| Product | **RTX PRO 5000 Blackwell Laptop GPU** |
+| OS | Windows 11 |
+| Download Type | **Production Branch / Studio** |
+
+595.97이 목록에 없으면 같은 R595 브랜치의 더 높은 596.x를 고른다. 595.97 이상이면
+요구사항은 충족한다.
+
+설치할 때: **AC 연결 상태**에서, 사용자 지정 설치 → **깨끗한 설치 수행** 체크,
+끝나면 재부팅.
 
 ```powershell
 nvidia-smi     # Driver Version 이 595.97 이상이면 통과
 ```
+
+설치 프로그램이 "호환 하드웨어 없음"으로 거부하면 노트북 제조사가 드라이버를
+커스터마이즈한 경우다. 제조사 지원 페이지에서 받는다.
 
 > 지금 당장 안 해도 Phase 5a까지는 진행된다. Phase 6(Isaac Sim) 전까지만
 > 끝내면 된다. 다만 재부팅이 필요하므로 먼저 해두는 편이 편하다.
