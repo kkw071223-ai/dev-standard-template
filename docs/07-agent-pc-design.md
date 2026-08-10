@@ -76,11 +76,27 @@
 |---|---|---|
 | **NVIDIA Agent Skills** (`nvidia/skills`) | Physical AI, DeepStream, Jetson, TAO, DOCA 등 수백 개. Claude Code / Codex / Cursor 대응 | Claude Code에 직접 설치. `omniverse-cad-to-simready`, `omniverse-realtime-viewer`, `omniverse-usd-performance-tuning`, `deepstream-*`, `amc-*` |
 | **NeMo Agent Toolkit** | `nvidia-nat` **1.8** (`pip install nvidia-nat`, `[langchain]` 등 extras) | 루프 관측·프로파일링 계층 (선택, Phase 11 이후) |
-| **NemoClaw** | OpenShell 샌드박스 + 관리형 Nemotron 추론 + Privacy Router + 네트워크 정책 + 스냅샷 | 위험한 자율 실행의 격리 실행기. **Hermes 에이전트**를 여기서 돌린다 |
-| **Hermes** | NemoClaw가 구동 가능한 에이전트 하네스 (기본 OpenClaw, 그 외 Hermes / LangChain Deep Agents Code) | 장기 자율 태스크 담당 |
+| **NemoClaw** | OpenShell 샌드박스 + 관리형 Nemotron 추론 + Privacy Router + 네트워크 정책 + 스냅샷. Hermes / LangChain Deep Agents Code / OpenClaw 하네스를 구동 | **선택.** `30-agents` 도메인의 연구 대상 (§1.4) |
+| **Hermes** | **Nous Research**가 만든 에이전트 하네스. 쓸수록 스스로 메모리와 스킬을 써 나가는 자가 진화형 | **선택.** 주력 코딩에는 쓰지 않는다 — 이유는 §1.4 |
 | **Notion MCP** | `https://mcp.notion.com/mcp` (streamable HTTP, OAuth) | Notion 미러링. Claude Max 구독으로 사용 가능 |
 
 > **용어 정정:** "Omniverse Agent Toolkit"이라는 단일 제품은 없다. 당신이 말한 것에 해당하는 실체는 셋으로 갈린다 — ① `nvidia/skills`의 `omniverse-*` 스킬, ② `NVIDIA-Omniverse/kit-usd-agents` (Kit 안에서 도는 USD 에이전트 베이스), ③ `NVIDIA-Omniverse/usd-content-agents` (VLM으로 머티리얼·물리속성 자동 배정). 이 설계는 ①을 주력으로, ③을 `10-cad2sim`의 보조로 쓴다.
+
+### 1.4 왜 Hermes가 아니라 Claude Code인가
+
+초안에서는 Hermes를 주력 실행기로 넣었다. 사용자의 통합 요구 목록에 들어 있었기 때문이지, 아키텍처가 요구해서가 아니었다. 확인해 보니 **주력으로 쓸 수 없는 이유가 하나 있다.**
+
+| 확인한 사실 | 결과 |
+|---|---|
+| NemoClaw는 추론 공급자를 **OpenAI 호환 엔드포인트**(`https://inference.local/v1`)로 설정한다 | 하네스는 OpenAI 호환 API를 요구한다 |
+| **Claude Max 구독은 API 엔드포인트가 아니다** — Claude Code / Claude Desktop에서 쓰는 구독이다 | Hermes에 Claude Max를 꽂을 수 없다 |
+| Hermes에 Claude를 물리려면 **Anthropic API 키(종량과금)** 가 별도로 필요하다 | 결제수단 제약에 걸린다 |
+
+즉 **Hermes를 주력으로 쓰면 Opus가 아니라 Nemotron으로 코딩하게 된다.** 이미 구독 중인 최상급 모델을 두고 내려가는 선택이므로, 주력은 Claude Code로 확정한다.
+
+**코딩·검증 품질을 올리는 건 하네스 교체가 아니라 루프를 조이는 것이다.** §10의 네 가지 — 검증을 실행과 다른 프로세스가 수행, 측정 불가능한 성공기준 거부, `result.json`에 없는 수치 인용 금지, 실패 로그 원문 전달 — 이게 없으면 어떤 하네스를 얹어도 품질은 오르지 않는다. 반대로 이게 있으면 Hermes 없이 충분하다.
+
+**Hermes가 실제로 쓸모 있는 자리:** 쓸수록 스스로 메모리와 스킬을 축적하는 자가 진화 구조가 Hermes의 특징이다. 이건 주력 코딩이 아니라 **`30-agents` 도메인의 관찰 대상**으로 맞다 — NIM 무료 크레딧으로 돌려보고, 쓸 만한 패턴을 Conductor에 이식한다. 격리 샌드박스에서 위험한 자율 실행을 시험하는 용도로도 맞다. **Phase 7에서 선택 항목으로 둔다.**
 
 ---
 
@@ -103,7 +119,7 @@
 2. **발열·클럭 스로틀링이 실재한다.** 상시 가동 + Isaac Sim RTX 렌더는 노트북 쿨링에 부담이고, 뚜껑을 닫으면 배기가 더 나빠진다. → 기본 모드를 **headless**로 두고 GUI는 필요할 때만 (§4). 무거운 잡은 뚜껑을 열고 돌린다.
 3. **전원이 빠지면 배터리 모드로 떨어진다.** 평소 AC이므로 예외 상황이지만, 배터리에서는 GPU 클럭이 급감한다. Conductor가 배터리를 감지하면 SIM 모드가 필요한 잡을 큐에 보류하고 텔레그램으로 알린다 (Phase 11-3).
 
-**"가끔 끈다"는 설계상 두 곳에서 흡수된다.** 꺼져 있는 동안의 지시는 Cloudflare Worker가 받아 큐에 쌓고 "PC 꺼짐"으로 즉답하며(§8), 다시 켜지면 Conductor의 첫 하트비트에서 밀린 지시를 일괄 수령한다. **PC를 꺼도 지시는 유실되지 않는다.**
+**"가끔 끈다"는 텔레그램이 그냥 흡수한다.** 꺼져 있는 동안 보낸 지시는 텔레그램 서버가 최대 24시간 보관하고, 부팅 후 Conductor가 롱폴링을 재개하면 밀린 지시를 전부 받아간다. **PC를 꺼도 지시는 유실되지 않는다.** 꺼져 있는 그 순간에 "PC 꺼짐"이라고 *즉답*까지 받고 싶으면 §8.2의 Phase 5b를 얹는다 — 선택이다.
 
 ### Isaac Sim 6.0.1 요구사항 대비 위치
 
@@ -127,9 +143,9 @@ graph TB
         TG["Telegram<br/>지시 · 보고 · 승인"]
     end
 
-    subgraph CLOUD["☁️ 상시 가동 (PC 밖)"]
-        CF["Cloudflare Worker<br/>무료 티어<br/>─────────<br/>· Telegram webhook 수신<br/>· heartbeat 감시<br/>· PC 꺼짐 → 즉시 회신<br/>· 지시를 큐에 적재"]
-        KV[("KV Store<br/>명령 큐 + 하트비트")]
+    subgraph CLOUD["☁️ 선택 · Phase 5b — PC 밖 상시 가동"]
+        CF["Cloudflare Worker<br/>무료 티어<br/>─────────<br/>하는 일은 딱 하나:<br/>PC 꺼짐 → 즉시 회신<br/>(지시 보관은 텔레그램이<br/>이미 24h 해준다)"]
+        KV[("KV Store<br/>하트비트")]
         CF --- KV
     end
 
@@ -144,8 +160,8 @@ graph TB
         end
 
         subgraph WSL["WSL2 · Ubuntu 24.04 + Docker Desktop"]
-            NC["NemoClaw / OpenShell<br/>└ Hermes 에이전트<br/>격리 자율 실행"]
             DS["DeepStream 9.1 컨테이너<br/>MV3DT · AutoMagicCalib"]
+            NC["NemoClaw / OpenShell<br/>└ Hermes 하네스<br/>선택 · 30-agents 연구용"]
         end
     end
 
@@ -156,41 +172,82 @@ graph TB
         GH["GitHub<br/>코드 · 아티팩트"]
     end
 
-    TG <-->|"webhook"| CF
-    CF <-->|"롱폴/HTTPS"| COND
-    COND -->|"heartbeat 60s"| CF
+    TG <==>|"기본 · Phase 5a<br/>getUpdates 롱폴링"| COND
+    TG -.->|"5b로 전환 시<br/>webhook"| CF
+    CF -.->|"명령 중계"| COND
+    COND -.->|"heartbeat 60s"| CF
 
-    COND --> CC
+    COND ==>|"프로세스 기동"| CC
     COND --> ISAAC
     COND --> OLL
-    COND --> NC
     COND --> DS
+    COND -.-> NC
     CC --> REPO
     CC --> ISAAC
 
     COND -->|"검증된 사실만 기록"| OBS
     OBS -->|"미러링"| NOTION
     CC --> ANTH
-    NC --> NGC
+    NC -.-> NGC
     CC --> GH
 
     style CF fill:#f9a825,color:#000
     style COND fill:#1565c0,color:#fff
+    style CC fill:#1565c0,color:#fff
     style OBS fill:#7b1fa2,color:#fff
     style ISAAC fill:#2e7d32,color:#fff
+    style NC fill:#9e9e9e,color:#fff
 ```
 
-### 각 구성요소가 존재하는 이유
+> 실선 굵은 화살표가 **기본 경로**다. 점선은 **선택 항목** — Cloudflare Worker(Phase 5b)와 NemoClaw/Hermes는 없어도 전체가 돌아간다.
+
+### 3.1 각 구성요소가 존재하는 이유
 
 | 구성요소 | 왜 필요한가 | 없으면 무슨 일이 나나 |
 |---|---|---|
 | **Conductor** | 루프의 상태를 소유하는 단일 주체. Claude Code는 세션마다 죽으므로 루프를 기억할 수 없다 | 재시도·게이트·이력이 사라짐. "완료했다"는 자기 보고만 남음 |
-| **Cloudflare Worker** | PC가 꺼져 있을 때 대신 대답할 존재. PC 안의 무엇도 이 역할을 할 수 없다 | PC 끄면 텔레그램이 무응답. 당신 요구사항 6번 불충족 |
+| **Claude Code CLI** | Conductor가 프로그램으로 호출할 수 있는 유일한 창구 (§3.2) | 텔레그램 지시가 실행으로 이어지지 않음 |
 | **Obsidian Vault** | 에이전트가 직접 읽고 쓰는 **평문 파일** 기억장치 | 기억이 세션에 갇힘 → 매번 처음부터 → 환각 급증 |
 | **Notion** | 사람이 보기 좋은 이력·참고 DB. 폰에서 조회 | 없어도 동작하지만 회고가 불편 |
 | **도메인 워크스페이스** | 컨텍스트 오염 차단 | 2D→3D 작업 중 DeepStream 파일을 읽고 헛소리 |
-| **NemoClaw/Hermes** | 위험한 자율 실행의 샌드박스 | 자율 에이전트가 호스트를 건드림 |
 | **로컬 LLM** | 오프라인·저비용 기술 검증. Claude 호출 아끼기 | 사소한 확인에도 Claude 왕복 |
+| Cloudflare Worker *(선택)* | 꺼져 있을 때 "PC 꺼짐"이라고 **즉답**하는 것. 그것 하나 | 즉답이 없을 뿐, 지시는 유실되지 않는다 (§8.1) |
+| NemoClaw/Hermes *(선택)* | 위험한 자율 실행의 샌드박스, 자가 진화 하네스 관찰 | 주력 경로에는 영향 없음 (§1.4) |
+
+### 3.2 지시가 실제로 흐르는 경로 — 왜 CLI인가
+
+"텔레그램으로 PC에 명령한다"는 말은 **텔레그램이 Claude Code에 직접 연결된다는 뜻이 아니다.** 사이에 Conductor가 있다.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant P as 📱 텔레그램
+    participant C as Conductor<br/>(파이썬 상주 프로세스)
+    participant K as Claude Code CLI<br/>(claude -p)
+    participant V as 검증 스크립트<br/>(별도 프로세스)
+
+    P->>C: "/sim 카트폴 500스텝"
+    Note over C: INTAKE → 도메인 판정 → PLAN
+    C->>K: 도메인 폴더를 cwd로 프로세스 기동<br/>--output-format stream-json
+    K-->>C: 진행 이벤트 스트림 (JSON 라인)
+    Note over K: 파일 수정 · Isaac 실행 · 코드 작성
+    K-->>C: 종료 코드
+    C->>V: 검증 실행 (Claude가 아니라 Conductor가)
+    V-->>C: exit 0 / result.json
+    C->>P: §8.5 포맷 리포트
+```
+
+이 사슬에서 **Conductor가 Claude Code를 프로세스로 띄울 수 있어야** 한다. 그래서 CLI가 필수다.
+
+| 형태 | 프로그램으로 호출 가능? | 이 설계에서 |
+|---|---|---|
+| **Claude Code CLI** | ✅ `claude -p "..." --output-format stream-json` | **필수.** 자동화의 유일한 경로 |
+| **VS Code 확장** | ❌ 에디터가 열려 있어야 하고 사람이 앉아 있어야 함 | 권장 — 당신이 직접 작업할 때. 내부적으로 같은 Claude Code다 |
+| **Claude Desktop** | ❌ 대화만 가능. 셸 실행 불가 | 설계에서 역할 없음 |
+
+무인 실행이므로 CLI 호출에는 `--allowedTools`와 `--permission-mode`를 함께 준다. 이게 없으면 권한 프롬프트에서 멈춰 서고, 폰에서는 그걸 눌러줄 방법이 없다. 승인이 필요한 건 §12의 두 게이트뿐이며, 그건 Conductor가 텔레그램으로 물어본다.
+
+> **CLI와 VS Code 확장은 택일이 아니다.** 확장은 CLI 위에 얹힌 UI이고, 둘 다 같은 Max 구독으로 인증한다. CLI를 깔고, 앉아서 작업할 때 쓰려면 확장도 깐다.
 
 ---
 
@@ -426,57 +483,87 @@ Notion MCP는 원격 서버(`https://mcp.notion.com/mcp`, streamable HTTP, OAuth
 
 ## 8. 텔레그램 I/O와 "PC 꺼짐" 응답 설계
 
-### 8.1 문제
+### 8.1 텔레그램만으로 이미 되는 것 — 초안의 과설계 정정
 
-당신 요구사항: *"PC가 꺼져 있으면 텔레그램으로 PC 꺼짐 회신"*
+초안은 Cloudflare Worker를 필수로 놓았다. 근거로 "지시 큐잉"을 들었는데, **그건 텔레그램이 이미 공짜로 해주고 있었다.**
 
-**PC 안의 어떤 프로그램도 이걸 못 한다.** 꺼져 있으니까. 따라서 PC 밖에 상시 가동되는 최소 구성요소가 하나 필요하다.
+> Bot API 문서 원문: *"Incoming updates are stored on the server until the bot receives them either way, but they will not be kept longer than 24 hours."*
 
-### 8.2 선택지 비교
+즉 Conductor가 `getUpdates` 롱폴링만 해도 이렇게 된다.
 
-| 방안 | 비용 | PC 꺼짐 회신 | 지시 큐잉 | 복잡도 |
-|---|---|---|---|---|
-| **A. Cloudflare Worker + KV** | 무료 (결제수단 불요) | ✅ 즉시 | ✅ | 낮음 (~80줄) |
-| B. GitHub Actions cron 감시 | 무료 | △ 최소 5분 지연 | ❌ | 중간 |
-| C. PC에서만 롱폴링 | 무료 | ❌ 무응답 | △ (텔레그램이 24h 보관) | 최저 |
+| 상황 | 텔레그램만 (Phase 5a) |
+|---|---|
+| PC 꺼진 동안 지시를 보냄 | 텔레그램 서버가 24시간 보관 |
+| PC 부팅 | 롱폴링 재개 → 밀린 지시 **전부 수신** |
+| 지시 유실 | **없음** |
+| 꺼져 있는 동안의 응답 | ❌ 조용함 |
 
-**→ A를 채택한다.** 당신이 결제수단 제약을 말했는데, Cloudflare Workers 무료 티어는 신용카드 없이 가입 가능하고 하루 10만 요청까지 무료다. 이 용도엔 하루 수백 건도 안 나온다.
+**Worker가 실제로 사는 값은 딱 하나다: 꺼져 있을 때 "🔌 PC 꺼짐"이라고 즉시 답하는 것.** 그 외에는 아무것도 추가하지 않는다.
 
-### 8.3 동작
+### 8.2 그래서 두 단계로 나눈다
+
+| | Phase 5a — 텔레그램만 | Phase 5b — Worker 추가 *(선택)* |
+|---|---|---|
+| 수신 방식 | `getUpdates` 롱폴링 | `setWebhook` → Worker |
+| 지시 유실 | 없음 | 없음 |
+| 밀린 지시 처리 | ✅ 부팅 시 | ✅ 부팅 시 |
+| 꺼짐 즉답 | ❌ | ✅ |
+| 사람이 만들 계정 | 0개 추가 | +1 (Cloudflare, 무료·결제수단 불요) |
+| 코드 | 0줄 추가 | ~80줄 |
+
+**5a로 먼저 세운다.** 5b는 엄밀히 상위집합이라 나중에 얹어도 앞 단계가 바뀌지 않는다. 며칠 써보고 "껐을 때 조용한 게 답답하다" 싶으면 그때 올린다.
+
+> **5a→5b 전환 시 반드시 알아야 할 것:** `getUpdates`와 `setWebhook`은 **동시 사용이 불가능하다.** 문서 원문: *"You will not be able to receive updates using getUpdates for as long as an outgoing webhook is set up."* 따라서 전환은 원자적으로 해야 한다 — Conductor의 롱폴링을 먼저 멈추고, `setWebhook`을 호출하고, Conductor를 Worker 풀링 모드로 재기동한다. 순서를 뒤집으면 그 사이에 온 지시가 어느 쪽에도 잡히지 않는다.
+
+### 8.3 동작 — Phase 5a (기본)
 
 ```mermaid
 sequenceDiagram
     participant U as 📱 당신
     participant T as Telegram
-    participant W as CF Worker
-    participant K as KV
     participant C as Conductor (PC)
 
-    Note over C,W: PC 켜짐 — 60초마다 하트비트
-    C->>W: POST /heartbeat {ts, mode, queue_len}
-    W->>K: put("hb", ts)
-
+    Note over C,T: PC 켜짐 — getUpdates 롱폴링 상시
+    C->>T: getUpdates(offset, timeout=25)
     U->>T: "/sim 카트폴 500스텝 돌려줘"
+    T-->>C: 지시 전달
+    C-->>T: "✅ 접수. 처리 중…"
+    C->>C: 루프 실행 (§10)
+    C-->>T: 결과 리포트 (§8.5)
+
+    Note over C,T: PC 꺼짐
+    U->>T: "/cad 도면 변환해줘"
+    Note over T: 서버가 최대 24h 보관<br/>(당신에게는 아무 응답 없음)
+    Note over C,T: PC 부팅 → 롱폴링 재개
+    C->>T: getUpdates(offset)
+    T-->>C: 밀린 지시 일괄 전달
+    C-->>T: "🔋 PC 복귀. 대기 중이던 지시 1건 처리 시작"
+```
+
+### 8.3b 동작 — Phase 5b를 얹었을 때 (선택)
+
+```mermaid
+sequenceDiagram
+    participant U as 📱 당신
+    participant T as Telegram
+    participant W as CF Worker + KV
+    participant C as Conductor (PC)
+
+    Note over C,W: 켜져 있는 동안 60초마다
+    C->>W: POST /heartbeat {ts, mode}
+
+    U->>T: 지시
     T->>W: webhook
-    W->>K: get("hb")
-    alt 하트비트 < 3분
-        W->>K: push(cmd) → 명령 큐
-        W-->>T: "✅ 접수. 처리 중…"
+    alt 하트비트 < 3분 — PC 살아있음
+        W-->>T: "✅ 접수"
         C->>W: GET /pull (롱폴 25s)
-        W-->>C: 명령 전달
-        C->>C: 루프 실행 (§10)
+        W-->>C: 지시 전달
         C->>W: POST /notify {리포트}
         W-->>T: 결과 리포트
-    else 하트비트 ≥ 3분 (PC 꺼짐/절전)
-        W->>K: push(cmd) → 대기 큐
-        W-->>T: "🔌 PC 꺼져 있음<br/>(마지막 신호 08-10 14:32)<br/>대기열에 저장. 부팅되면 처리합니다."
+    else 하트비트 ≥ 3분 — PC 꺼짐
+        W-->>T: "🔌 PC 꺼져 있음 (마지막 신호 08-10 14:32)<br/>대기열에 저장. 부팅되면 처리합니다."
+        Note over W: 부팅 후 첫 /pull에서 일괄 전달
     end
-
-    Note over C,W: 부팅 후 첫 하트비트 시
-    C->>W: POST /heartbeat
-    W-->>C: 밀린 명령 일괄 전달
-    C->>W: POST /notify
-    W-->>T: "🔋 PC 복귀. 대기 중이던 지시 2건 처리 시작"
 ```
 
 ### 8.4 텔레그램 명령 규격
@@ -994,11 +1081,22 @@ claude --version
 
 > ⚠ **네이티브 Windows에서는 Claude Code 샌드박싱이 지원되지 않는다.** 위험한 자율 실행은 WSL2 쪽이나 NemoClaw(Phase 7)에서 돌린다.
 
+VS Code 확장도 깐다. CLI와 택일이 아니다 — 확장은 CLI 위의 UI이고 같은 Max 구독으로 인증한다. CLI는 Conductor가 쓰고, 확장은 당신이 PC 앞에 앉을 때 쓴다 (§3.2).
+
+```powershell
+code --install-extension anthropic.claude-code   # ⚠ 확장 ID는 마켓플레이스에서 확인
+```
+
 **✔ 확인**
 ```powershell
 claude doctor      # 전 항목 OK
 claude -p "1+1은?" # 응답이 옴 = 인증 성공
+
+# 무인 실행 형태로도 되는지 — Conductor가 쓸 형태가 이것이다
+claude -p "이 폴더의 파일 개수를 세라" --output-format stream-json --permission-mode acceptEdits
 ```
+
+> 마지막 명령이 핵심이다. 무인 실행에서는 `--allowedTools` / `--permission-mode`로 권한을 미리 열어두지 않으면 프롬프트에서 멈춰 서고, 폰에서는 그걸 눌러줄 방법이 없다. 승인이 필요한 건 §12의 두 게이트뿐이며 그건 Conductor가 텔레그램으로 묻는다.
 
 ---
 
@@ -1032,32 +1130,23 @@ claude -p "Notion의 Runs DB에 테스트 행 하나 추가하고 다시 읽어�
 
 ---
 
-### Phase 5 — 텔레그램 + Cloudflare Worker + Conductor 골격 (1–2시간)
+### Phase 5a — 텔레그램 + Conductor 골격 (1–2시간)
 
-**5-1. 텔레그램 봇**
+**여기가 이 설계에서 가장 중요한 단계다.** 이게 서는 순간부터 폰으로 지시할 수 있고, 이후 모든 단계(특히 몇 시간짜리 Isaac Sim 다운로드)를 폰으로 지켜볼 수 있다.
+
+**5a-1. 텔레그램 봇** — 사람이 직접
 1. 텔레그램에서 `@BotFather` → `/newbot` → 봇 토큰 획득
-2. 봇과 대화 시작 → `https://api.telegram.org/bot<TOKEN>/getUpdates`로 본인 `chat_id` 확인
+2. 봇과 대화 시작(아무 말) → 브라우저에서 `https://api.telegram.org/bot<TOKEN>/getUpdates` → `"chat":{"id":숫자}` 확인
 
-**5-2. Cloudflare Worker**
-1. dash.cloudflare.com 무료 가입 (결제수단 불요)
-2. Workers & Pages → Create → KV 네임스페이스 `AGENT_KV` 생성·바인딩
-3. §8.3 로직의 Worker 배포 (webhook 수신 / heartbeat / pull 롱폴 / notify)
-4. 시크릿 등록: `wrangler secret put TELEGRAM_TOKEN`, `SHARED_SECRET`
-5. 웹훅 등록:
-```
-https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<worker>.workers.dev/tg
-```
-
-**5-3. Conductor 골격**
+**5a-2. Conductor 골격**
 ```powershell
 python -m venv D:\agent\conductor\.venv
 D:\agent\conductor\.venv\Scripts\pip install httpx pydantic rich apscheduler
 ```
 `%USERPROFILE%\.agent\secrets.env`:
 ```
+TELEGRAM_TOKEN=...
 TELEGRAM_CHAT_ID=...
-CF_WORKER_URL=https://<worker>.workers.dev
-CF_SHARED_SECRET=...
 NGC_API_KEY=...
 NIM_API_KEY=...
 ```
@@ -1065,10 +1154,39 @@ NIM_API_KEY=...
 icacls "$env:USERPROFILE\.agent\secrets.env" /inheritance:r /grant:r "$env:USERNAME:(R,W)"
 ```
 
+Conductor가 하는 일 (§10 상태기계):
+- `getUpdates(offset, timeout=25)` 롱폴링 루프
+- 지시 파싱 → 도메인 판정 → 도메인 폴더를 cwd로 `claude -p` 기동 (§3.2)
+- 검증을 **별도 프로세스**로 실행 → `result.json`
+- §8.5 포맷으로 회신
+
 **✔ 확인**
 - 폰에서 `/status` → PC에서 응답이 옴
-- Conductor 종료 후 3분 대기 → `/status` → **"🔌 PC 꺼져 있음"** 회신
-- Conductor 재기동 → 밀린 명령이 처리됨
+- 폰에서 `/ask 이 repo의 픽스처가 몇 개야` → Claude Code가 실제로 기동되어 답이 옴
+- **Conductor를 끄고** 지시를 보냄 → 조용함 → Conductor 재기동 → **밀린 지시가 처리됨** (텔레그램 24h 보관 확인)
+
+---
+
+### Phase 5b — Cloudflare Worker *(선택, 나중에 얹어도 됨)*
+
+5a가 며칠 잘 돌고 나서, "껐을 때 조용한 게 답답하다" 싶을 때만 한다. 얻는 것은 **"🔌 PC 꺼짐" 즉답 하나뿐**이다 (§8.2).
+
+1. dash.cloudflare.com 무료 가입 (결제수단 불요)
+2. Workers & Pages → Create → KV 네임스페이스 `AGENT_KV` 생성·바인딩
+3. §8.3b 로직의 Worker 배포 (webhook 수신 / heartbeat / pull 롱폴 / notify)
+4. 시크릿 등록: `wrangler secret put TELEGRAM_TOKEN`, `SHARED_SECRET`
+5. **전환은 원자적으로** — 순서를 지킨다:
+```powershell
+# ① Conductor 롱폴링 정지 (이 순서를 뒤집으면 그 사이 지시가 유실된다)
+# ② 웹훅 등록
+curl.exe "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<worker>.workers.dev/tg"
+# ③ Conductor를 Worker 풀링 모드로 재기동
+```
+되돌리려면 `deleteWebhook` 후 롱폴링 모드로 재기동한다.
+
+**✔ 확인**
+- Conductor 종료 후 3분 대기 → 폰에서 `/status` → **"🔌 PC 꺼져 있음"** 즉답
+- Conductor 재기동 → 밀린 지시가 일괄 처리됨
 
 ---
 
@@ -1107,7 +1225,9 @@ C:\isaacsim\python.bat -c "from isaacsim import SimulationApp; app=SimulationApp
 
 ---
 
-### Phase 7 — WSL2 + Docker + GPU + NemoClaw/Hermes (1–2시간)
+### Phase 7 — WSL2 + Docker + GPU (1–2시간)
+
+> WSL2 + Docker + GPU 패스스루는 **필수**다 — `20-digitaltwin`의 DeepStream이 여기서 돈다. 마지막의 **NemoClaw/Hermes는 선택**이며, 안 깔아도 나머지 전부가 정상 동작한다 (§1.4).
 
 ```powershell
 winget install --id Docker.DockerDesktop -e
@@ -1145,7 +1265,8 @@ sudo apt-key del 7fa2af80 2>/dev/null
 sudo apt-get install -y cuda-toolkit-12-8
 ```
 
-NemoClaw (요구사항: vCPU 4+, RAM 16GB 권장, 디스크 40GB 권장, Node 22.19+, npm 10+, Python 3, Docker):
+**선택 — NemoClaw / Hermes.** 주력 경로가 아니다 (§1.4). `30-agents` 도메인에서 자가 진화 하네스를 관찰하거나, 위험한 자율 실행을 격리해 돌려볼 때만 깐다. **Phase 11까지 다 서고 나서 해도 늦지 않다.**
+요구사항: vCPU 4+, RAM 16GB 권장, 디스크 40GB 권장, Node 22.19+, npm 10+, Python 3, Docker.
 ```bash
 node --version && npm --version && python3 --version && docker --version
 # NemoClaw 설치 및 Hermes 에이전트 기동 — nemoclaw-user-guide 스킬 참조
@@ -1153,8 +1274,8 @@ node --version && npm --version && python3 --version && docker --version
 
 **✔ 확인**
 ```bash
-docker run --rm --gpus all nvidia/cuda:12.8.0-base-ubuntu24.04 nvidia-smi   # GPU 보임
-# NemoClaw 샌드박스에서 Hermes로 "echo hello" 실행 성공
+docker run --rm --gpus all nvidia/cuda:12.8.0-base-ubuntu24.04 nvidia-smi   # GPU 보임 = 필수 통과
+# (선택) NemoClaw를 깔았다면: 샌드박스에서 "echo hello" 실행 성공
 ```
 
 ---
@@ -1296,12 +1417,12 @@ wsl bash -lc "cd /mnt/d/agent/repos/dev-standard-template && \
 |---|---|---|---|---|
 | 1 | **Anthropic Claude Max** | ✅ 보유 | 구독 중 | Claude Code 주 추론 |
 | 2 | **NVIDIA NGC API Key** | ✅ 보유 | 무료 티어 | 컨테이너·모델 pull |
-| 3 | **NVIDIA NIM / build.nvidia.com API Key** | ✅ 보유 | 무료 크레딧 | NemoClaw 관리형 Nemotron 추론 |
+| 3 | **NVIDIA NIM / build.nvidia.com API Key** | ✅ 보유 | 무료 크레딧 | *(선택)* NemoClaw 관리형 Nemotron 추론 |
 | 4 | **GitHub** | ✅ 보유 | 무료 | 코드 + Vault 백업 |
 | 5 | **Notion** | ✅ 보유 | 무료 | 이력·참고 DB (MCP는 OAuth, 별도 키 불요) |
 | 6 | **Telegram Bot Token** | ⬜ **생성 필요** | 무료 | `@BotFather` → `/newbot` |
 | 7 | **Telegram chat_id** | ⬜ **확인 필요** | — | `getUpdates`로 조회 |
-| 8 | **Cloudflare 계정** | ⬜ **가입 필요** | 무료 (결제수단 불요) | Worker + KV. PC 꺼짐 회신 |
+| 8 | Cloudflare 계정 | ⬜ *(선택 · Phase 5b)* | 무료 (결제수단 불요) | Worker + KV. **"PC 꺼짐" 즉답 하나만을 위한 것** (§8.2) |
 | 9 | Hugging Face 토큰 | ⬜ 선택 | 무료 | 게이트된 모델 다운로드 시 |
 
 **키 취급 규칙 (당신이 "그대로 써도 된다"고 했으므로 값 자체는 그대로 사용):**
@@ -1328,6 +1449,11 @@ wsl bash -lc "cd /mnt/d/agent/repos/dev-standard-template && \
 | Claude Code Windows 설치 = `irm https://claude.ai/install.ps1 \| iex` 또는 winget `Anthropic.ClaudeCode` | Claude Code 공식 문서 |
 | **샌드박싱은 WSL2에서만 지원, 네이티브 Windows 미지원** | 동 |
 | WSL2에 리눅스 NVIDIA 드라이버 설치 금지. `cuda`/`cuda-drivers` 메타패키지 금지, `cuda-toolkit-12-x`만 | docs.nvidia.com/cuda/wsl-user-guide |
+| Claude Code 무인 실행: `claude -p`, `--output-format text\|json\|stream-json`, `--allowedTools` / `--permission-mode`로 권한 프롬프트 회피 | Claude Code headless 문서 |
+| **텔레그램은 봇이 받아가지 않은 업데이트를 최대 24시간 보관한다** — *"they will not be kept longer than 24 hours"* | core.telegram.org/bots/api#getupdates |
+| **`getUpdates`와 `setWebhook`은 동시 사용 불가** — *"You will not be able to receive updates using getUpdates for as long as an outgoing webhook is set up"* | 동 |
+| **Hermes는 Nous Research**의 에이전트 하네스다 (NVIDIA 제품 아님). 쓸수록 스스로 메모리·스킬을 축적 | github.com/nousresearch/hermes-agent, NVIDIA 기술블로그 |
+| NemoClaw는 추론 공급자를 **OpenAI 호환** 라우트(`https://inference.local/v1`)로 설정한다 → Claude Max 구독은 API 엔드포인트가 아니므로 꽂을 수 없다 (§1.4) | NemoClaw 문서 |
 | NemoClaw: vCPU 4+, RAM 8GB 최소/16GB 권장, 디스크 20GB 최소/40GB 권장, Node 22.19+, npm 10+, Docker. **WSL2 + Docker Desktop 지원 플랫폼** | NemoClaw 문서 |
 | Ollama Windows: `winget install --id Ollama.Ollama`, `OLLAMA_MODELS`로 저장경로 변경 | docs.ollama.com/windows |
 | Notion MCP 원격 엔드포인트 `https://mcp.notion.com/mcp` (OAuth). 페이지별 명시적 연결 필요 | developers.notion.com |
@@ -1386,8 +1512,8 @@ Claude Code는 아직 이 PC에 없다. 따라서 **처음 세 가지는 사람�
 
 ```mermaid
 flowchart LR
-    A["① 사전 점검<br/>00-preflight.ps1<br/>⏱ 3분"] --> B["② 계정 2개<br/>텔레그램 봇<br/>Cloudflare<br/>⏱ 10분"]
-    B --> C["③ Claude Code 설치<br/>명령 한 줄<br/>⏱ 5분"]
+    A["① 사전 점검<br/>00-preflight.ps1<br/>⏱ 3분"] --> B["② 텔레그램 봇<br/>토큰 + chat_id<br/>⏱ 5분"]
+    B --> C["③ Claude Code CLI 설치<br/>명령 한 줄<br/>⏱ 5분"]
     C --> D["④ 여기서부터<br/>에이전트가 인수<br/>Phase 0–11"]
     
     style A fill:#c62828,color:#fff
@@ -1395,6 +1521,8 @@ flowchart LR
     style C fill:#1565c0,color:#fff
     style D fill:#2e7d32,color:#fff
 ```
+
+> Cloudflare 가입은 여기서 빠졌다. Phase 5b로 미뤘고, 그마저 선택이다 (§8.2). Hermes/NemoClaw도 마찬가지로 주력 경로에서 빠졌다 (§1.4).
 
 ### ① 사전 점검 — 가장 먼저, 예외 없이
 
@@ -1417,23 +1545,24 @@ workers.dev       (CRITICAL)     reachable (200)
 
 둘 중 하나라도 `BLOCKED`이면 §8의 텔레그램 채널이 성립하지 않는다. 사내 프록시가 막는 경우이며, **그때는 설계를 바꿔야 한다** — 되는 척 진행하면 Phase 5에서 몇 시간을 버린다.
 
-### ② 계정 2개 — 사람만 할 수 있는 일
+### ② 텔레그램 봇 — 사람만 할 수 있는 일
 
 | 할 일 | 방법 | 결과물 |
 |---|---|---|
-| 텔레그램 봇 생성 | 텔레그램에서 `@BotFather` 검색 → `/newbot` → 이름 입력 | 봇 토큰 (`123456:ABC-...`) |
+| 봇 생성 | 텔레그램에서 `@BotFather` 검색 → `/newbot` → 이름 입력 | 봇 토큰 (`123456:ABC-...`) |
 | 내 chat_id 확인 | 만든 봇과 대화 시작(아무 말) → 브라우저에서 `https://api.telegram.org/bot<토큰>/getUpdates` | `"chat":{"id":숫자}` |
-| Cloudflare 가입 | dash.cloudflare.com — 무료, **결제수단 불요** | 계정 |
 
-OAuth·2FA·이메일 인증이 걸려 있어 에이전트가 대신 못 한다. 토큰은 `%USERPROFILE%\.agent\secrets.env`에만 둔다.
+2FA·앱 인증이 걸려 있어 에이전트가 대신 못 한다. 토큰은 `%USERPROFILE%\.agent\secrets.env`에만 둔다.
 
-### ③ Claude Code 설치 — 명령 한 줄
+### ③ Claude Code CLI 설치 — 명령 한 줄
 
 ```powershell
 irm https://claude.ai/install.ps1 | iex
 claude --version
 claude          # 브라우저가 열린다. Claude Max 계정으로 로그인
 ```
+
+**CLI여야 한다.** VS Code 확장이나 Claude Desktop으로는 Conductor가 프로그램으로 호출할 수 없다 (§3.2). 확장은 나중에 추가로 깔면 되고, 둘은 같은 구독을 쓴다.
 
 ### ④ 인수인계
 
@@ -1448,4 +1577,14 @@ Phase 0부터 순서대로 진행하되, 각 Phase의 "✔ 확인"을 통과하�
 멈추고 보고하라. 통과 여부는 명령 출력 원문으로 판단한다.
 ```
 
-**Phase 5(텔레그램 왕복)까지 서면 그 다음부터는 폰으로 지시할 수 있다.** Isaac Sim은 다운로드만 몇 시간이므로 반드시 그 뒤에 시작한다 — 그래야 받는 동안 폰으로 진행 상황을 본다.
+**Phase 5a(텔레그램 왕복)까지 서면 그 다음부터는 폰으로 지시할 수 있다.** Isaac Sim은 다운로드만 몇 시간이므로 반드시 그 뒤에 시작한다 — 그래야 받는 동안 폰으로 진행 상황을 본다.
+
+### 이번 개정에서 빠진 것 (주력 경로 축소)
+
+| 항목 | 어떻게 됐나 | 이유 |
+|---|---|---|
+| **Hermes / NemoClaw** | 필수 → **선택**, Phase 7 맨 뒤 | Claude Max를 꽂을 수 없어 Nemotron으로 내려가게 된다 (§1.4) |
+| **Cloudflare Worker** | 필수 → **선택**, Phase 5b | 텔레그램이 24h 보관을 이미 해준다. Worker가 사는 값은 "즉답" 하나 (§8.2) |
+| 사람이 만들 계정 | 2개 → **1개** (텔레그램만) | 위 두 개가 빠져서 |
+
+빠진 것들은 지워진 게 아니라 **뒤로 밀렸다.** 나중에 얹어도 앞 단계가 바뀌지 않도록 순서를 잡았다.
