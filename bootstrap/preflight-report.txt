@@ -1,7 +1,11 @@
 == PREFLIGHT  2026-08-10 21:18:37 ============================
    Measured on the target machine. This file is the source of truth for
-   docs/07-agent-pc-design.md §15 — where it disagrees with the document,
-   this file wins.
+   docs/07-agent-pc-design.md section 15 - where it disagrees with the
+   document, this file wins.
+
+   *** SUPERSEDED IN PART - see AMENDMENT at the bottom of this file. ***
+   The machine has moved since this snapshot. Read the amendment before
+   acting on anything here.
 
 == OS ========================================================
 edition   : Microsoft Windows 11 Pro
@@ -88,10 +92,11 @@ NOTE: 3xx/4xx here means the host answered, which is all this probe
 tests. No corporate proxy is interfering. The design's network
 assumptions hold.
 
-== VERDICT ===================================================
+== VERDICT (as of 2026-08-10 21:18) ==========================
 GO, with one blocker and four adjustments:
 
   BLOCKER  GPU driver 591.66 -> must reach 595.97+ before Phase 6.
+           *** RESOLVED - see amendment. ***
 
   ADJUST   1. All D:\agent paths become C:\agent.
            2. Hybrid graphics: pin Isaac Sim to the NVIDIA adapter.
@@ -100,3 +105,66 @@ GO, with one blocker and four adjustments:
            4. Modern Standby (S0) is the only sleep state, so lid
               action must be "do nothing" on both AC and DC, and
               heavy jobs should run with the lid open.
+              *** REVISED - see amendment item C. ***
+
+
+== AMENDMENT  2026-08-11 ====================================
+   Recorded by the agent running on the machine itself, from read-only
+   checks. Nothing was installed. Where this section disagrees with the
+   snapshot above, the amendment wins.
+
+RESOLVED SINCE THE SNAPSHOT
+  GPU driver     591.66 -> 595.97. Exactly the Isaac Sim 6.0.1 tested
+                 version. The only blocker in the snapshot is gone.
+  git            installed
+  claude         installed at C:\Users\HP\.local\bin\claude.exe, PATH
+                 registered manually (the installer did not do it)
+  code           VS Code installed
+  repo           cloned to C:\agent\repos\dev-standard-template
+  C: free        1,787 GB (was 1,795) - still far above the 270 GB budget
+
+STILL OPEN FROM THE SNAPSHOT
+  python         still the WindowsApps Store alias stub
+  node, npm, pwsh, docker, ollama    absent
+  WSL            no distribution
+  C:\agent       only repos\ exists; vault/domains/conductor/models/
+                 isaac-assets/scratch not created
+  %USERPROFILE%\.agent   does not exist, so no secrets.env
+  C:\isaacsim    does not exist
+
+NEW FINDINGS THE SNAPSHOT COULD NOT SEE
+
+  A. SLEEP IS STILL ARMED - this is now the top blocker.
+     Power scheme is "HP Optimized (Modern Standby)".
+     STANDBYIDLE = 300 s on AC, 180 s on DC.
+     The machine sleeps after five idle minutes. An always-on agent
+     cannot exist under that setting. Phase 0-2 has not been applied.
+
+  B. LIDACTION IS HIDDEN IN THIS SCHEME.
+     `powercfg /q SCHEME_CURRENT SUB_BUTTONS LIDACTION` prints the
+     scheme header and no value, exit 0.
+
+     This corrects the snapshot's own explanation. The snapshot blamed
+     a locale bug for the missing power lines. The locale bug was real
+     and did throw - but even a correct parser reads nothing here,
+     because the setting is hidden in this scheme. Two separate faults
+     were stacked, and only one was diagnosed.
+
+     Consequence: `powercfg /setacvalueindex ... LIDACTION 0` may not
+     take. Set it, then read it back, and unhide the attribute if the
+     read still returns nothing. See design Phase 0-2.
+
+  C. LID POLICY ON BATTERY - EARLIER ADVICE REVERSED.
+     The snapshot said lid action should be "do nothing" on both AC and
+     DC. That is wrong on DC. A laptop that never sleeps with the lid
+     shut and no power will overheat in a bag and drain flat.
+     AC = do nothing (always-on). DC = sleep (protect the hardware).
+     A job interrupted this way is not lost: Telegram holds the
+     instruction for 24 h and the run folder is already frozen.
+
+  D. Confirmed again: S0 is the only sleep state. S1/S2/S3 unsupported,
+     hibernate disabled.
+
+NEXT ACTION
+  Apply the power policy before anything else. Every later phase
+  assumes the machine stays awake.

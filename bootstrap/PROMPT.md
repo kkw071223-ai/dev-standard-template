@@ -1,10 +1,47 @@
 # Claude Code에 붙여넣을 지시문
 
 `bootstrap/README.md`의 3단계까지 끝낸 뒤, `C:\agent\repos\dev-standard-template`
-에서 `claude`를 실행하고 **아래 블록 전체를 한 번에 붙여넣는다.**
+에서 아래 순서로 진행한다.
 
-문단마다 나눠서 치지 말 것. 규칙과 게이트가 한 덩어리로 들어가야 에이전트가
-Phase 중간에 규칙을 잊지 않는다.
+## 시작 전 3가지
+
+**① MCP 서버 4개를 묻거든 Esc — 전부 거부한다.**
+`omni-ui-mcp` / `kit-mcp` / `usd-code-mcp` / `isaacsim-mcp` 는 `localhost:9901~9904`
+의 도커 컨테이너를 가리킨다. 아직 Docker도 없고 그 포트에 아무것도 없다. 켜면 매
+세션 연결 실패만 뜨고, 에이전트가 USD 도구가 있다고 착각한다. **Phase 7 이후**에
+켠다. (Phase 4의 Notion MCP는 원격 서버라 이것들과 무관하다.)
+
+**② auto 모드를 켠다.** [`AUTOMODE.md`](AUTOMODE.md) 참조. 요약하면
+`C:\Users\<you>\.claude\settings.json` 에:
+
+```json
+{
+  "permissions": {
+    "defaultMode": "auto",
+    "ask": ["Bash(git push:*)"]
+  }
+}
+```
+
+`ask` 규칙이 있어야 하는 이유: auto 모드는 기본적으로 push와 PR 생성을 허용한다.
+설계서 §12가 그 둘을 게이트로 두기로 했으므로 규칙으로 되돌린다.
+
+**③ PATH 새로고침 함수를 만들어 둔다.** Phase 1에서 Python·Node·VS Code를 줄줄이
+깔게 되는데, 설치 프로그램이 PATH를 바꿔도 열려 있는 창은 모른다.
+
+```powershell
+function refreshpath {
+  $env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
+              [Environment]::GetEnvironmentVariable("Path","User")
+}
+```
+
+---
+
+## 붙여넣을 블록
+
+**전체를 한 번에** 넣는다. 문단마다 나눠서 치지 말 것 — 규칙과 게이트가 한 덩어리로
+들어가야 에이전트가 Phase 중간에 규칙을 잊지 않는다.
 
 ---
 

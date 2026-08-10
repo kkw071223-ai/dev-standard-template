@@ -21,7 +21,7 @@
 </style>
 
 <header class="top"><div class="wrap"><div class="top-in">
-  <div class="slug"><b>07 · 에이전트 PC 설계 · 실측 반영</b></div>
+  <div class="slug"><b>07 · 에이전트 PC 설계 · 08-11 개정</b></div>
   <h1>07 — 상시 가동 에이전트 PC 설계서</h1>
   <p class="lede">대상: <b>Windows 11 Pro만 깔려 있고 Claude Desktop 하나만 설치된 모바일 워크스테이션</b><br>목표: 이 PC를 <b>제2의 뇌 + 상시 가동 자율 에이전트</b>로 만든다.<br>기준일: <b>2026-08-10</b> · 사전 점검 실측 반영 완료<br>사람이 할 일과 붙여넣을 지시문: [`bootstrap/README.md`](../bootstrap/README.md), [`bootstrap/PROMPT.md`](../bootstrap/PROMPT.md)<br><b>실측값이 이 문서보다 우선한다:</b> [`bootstrap/preflight-report.txt`](../bootstrap/preflight-report.txt)</p>
   <nav class="toc"><ol><li><a href="#0-이-문서를-읽는-법"><span class="n">0</span>이 문서를 읽는 법</a></li><li><a href="#1-2026-08-10-기준-nvidia-스택-현황"><span class="n">1</span>2026-08-10 기준 NVIDIA 스택 현황</a></li><li><a href="#2-하드웨어-판독--당신의-pc가-실제로-무엇인가"><span class="n">2</span>하드웨어 판독 — 당신의 PC가 실제로 무엇인가</a></li><li><a href="#3-전체-시스템-구성도"><span class="n">3</span>전체 시스템 구성도</a></li><li><a href="#4-vram-24gb-예산-설계"><span class="n">4</span>VRAM 24GB 예산 설계</a></li><li><a href="#5-디스크와-디렉터리-레이아웃"><span class="n">5</span>디스크와 디렉터리 레이아웃</a></li><li><a href="#6-obsidian-완전-입문"><span class="n">6</span>Obsidian 완전 입문</a></li><li><a href="#7-notion-역할과-스키마"><span class="n">7</span>Notion 역할과 스키마</a></li><li><a href="#8-텔레그램-io와-pc-꺼짐-응답-설계"><span class="n">8</span>텔레그램 I/O와 &quot;PC 꺼짐&quot; 응답 설계</a></li><li><a href="#9-도메인-워크스페이스-스키마--환각-방지-규약"><span class="n">9</span>도메인 워크스페이스 스키마 — 환각 방지 규약</a></li><li><a href="#10-루프-엔지니어링--상태기계"><span class="n">10</span>루프 엔지니어링 — 상태기계</a></li><li><a href="#11-그래프-엔지니어링--도메인별-dag"><span class="n">11</span>그래프 엔지니어링 — 도메인별 DAG</a></li><li><a href="#12-자율성-경계"><span class="n">12</span>자율성 경계</a></li><li><a href="#13-단계별-구축-순서"><span class="n">13</span>단계별 구축 순서</a></li><li><a href="#14-필요-계정과-키-목록"><span class="n">14</span>필요 계정과 키 목록</a></li><li><a href="#15-검증된-것과-추정인-것"><span class="n">15</span>검증된 것과 추정인 것</a></li><li><a href="#16-다음-단계"><span class="n">16</span>다음 단계</a></li><li><a href="#17-지금-당장-사람이-할-일"><span class="n">17</span>지금 당장 사람이 할 일</a></li><li><a href="#18-문서-생애주기--이-설계서는-언제-버려지나"><span class="n">18</span>문서 생애주기 — 이 설계서는 언제 버려지나</a></li></ol></nav>
@@ -273,8 +273,8 @@
 </tr>
 <tr>
 <td>GPU 드라이버</td>
-<td><strong>591.66</strong></td>
-<td>❌ <strong>블로커</strong> — Isaac Sim 6.0.1은 595.97 이상 필요</td>
+<td><strong>595.97</strong> (08-11 갱신 완료. 최초 실측은 591.66)</td>
+<td>✅ <strong>블로커 해소.</strong> Isaac Sim 6.0.1 요구값 정확히 충족</td>
 </tr>
 <tr>
 <td>내장 GPU</td>
@@ -319,7 +319,7 @@
 <p><strong>경로가 <code>C:\agent</code>로 바뀌었다.</strong> D: 드라이브가 없다. 대신 C:에 1,795 GB가 비어 있어 §5의 270 GB 예산을 훨씬 넘는다 — <strong>Isaac Sim 에셋 완전팩까지 여유롭게 들어간다.</strong> 이 문서 전체는 <code>C:\agent</code> 기준으로 이미 갱신했다.</p>
 </li>
 <li>
-<p><strong>드라이버 591.66은 블로커다.</strong> Phase 6 전에 595.97 이상으로 올려야 한다. Phase 5a까지는 진행 가능하므로 병렬로 처리한다.</p>
+<p>~~드라이버 591.66은 블로커다~~ → <strong>08-11 갱신 완료(595.97).</strong> 해소됐다. 대신 <strong>절전 정책이 새 최우선 블로커</strong>다 — 이 PC는 지금도 유휴 5분이면 잠든다 (Phase 0-2).</p>
 </li>
 <li>
 <p><strong>하이브리드 그래픽이다.</strong> Intel 내장 GPU가 함께 있다. Isaac Sim이 내장 GPU에 붙으면 실패한다 — 설정 → 시스템 → 디스플레이 → 그래픽에서 <code>isaac-sim.bat</code>과 <code>python.bat</code>을 <strong>고성능(NVIDIA)</strong> 으로 고정한다.</p>
@@ -331,7 +331,8 @@
 <p><strong>운용 전제 (사용자 확인):</strong> 평소에는 <strong>AC 연결 + 뚜껑 열림 + 절전 없이 상시 가동.</strong> 다만 <strong>가끔 뚜껑을 닫거나 전원을 끈다.</strong></p>
 <p><strong>이것이 설계에 미치는 영향 — 데스크톱이었다면 없었을 제약 3개:</strong></p>
 <ol>
-<li><strong>뚜껑을 닫아도 절대 잠들면 안 된다.</strong> Windows 기본값은 뚜껑 닫으면 절전이고, 이 기본값 하나로 상시 가동이 무너진다. AC/DC 양쪽 다 "아무것도 안 함"으로 바꾼다 (Phase 0). 반면 <strong>화면은 꺼져도 무방하다</strong> — 디스플레이 off는 연산을 멈추지 않는다. 뚜껑을 열어둔 채 상시 가동하므로 화면만 15분 뒤 끈다.</li>
+<li><strong>AC에서는 절대 잠들면 안 된다.</strong> 실측 결과 이 PC는 지금도 유휴 <strong>5분</strong>이면 잠든다("HP Optimized" 구성표, <code>STANDBYIDLE</code> AC 300초 / DC 180초). 이 한 줄 때문에 상시 가동이 성립하지 않으므로 Phase 0-2가 <strong>현재 최우선 블로커</strong>다. 반면 <strong>화면은 꺼져도 무방하다</strong> — 디스플레이 off는 연산을 멈추지 않는다.
+   <strong>배터리에서는 반대로 잠들게 둔다.</strong> 초안은 AC/DC 양쪽 다 "아무것도 안 함"을 권했는데, 그건 뒤집었다 — 전원 없이 뚜껑 닫힌 채 절대 안 자는 노트북은 가방 안에서 과열되고 배터리를 바닥낸다. 그렇게 잡이 끊겨도 잃는 건 없다: 텔레그램이 지시를 24시간 보관하고 런 폴더는 이미 동결돼 있다.</li>
 <li><strong>발열·클럭 스로틀링이 실재한다.</strong> 상시 가동 + Isaac Sim RTX 렌더는 노트북 쿨링에 부담이고, 뚜껑을 닫으면 배기가 더 나빠진다. → 기본 모드를 <strong>headless</strong>로 두고 GUI는 필요할 때만 (§4). 무거운 잡은 뚜껑을 열고 돌린다.</li>
 <li><strong>전원이 빠지면 배터리 모드로 떨어진다.</strong> 평소 AC이므로 예외 상황이지만, 배터리에서는 GPU 클럭이 급감한다. Conductor가 배터리를 감지하면 SIM 모드가 필요한 잡을 큐에 보류하고 텔레그램으로 알린다 (Phase 11-3).</li>
 </ol>
@@ -1559,26 +1560,48 @@ Claude Code — 실제 패치 작성          ← 여기서만 Claude 사용</pr
 <h3 id="phase-0--windows-기반-30분">Phase 0 — Windows 기반 (30분)</h3>
 <div class="term"><div class="term-bar"><span class="dot"></span>powershell</div><pre># 관리자 PowerShell
 
-# 0-1. GPU 드라이버 — 실측 591.66, 필요 595.97+. 이게 유일한 블로커다.
+# 0-1. GPU 드라이버 — 08-11에 595.97로 갱신 완료. 확인만 한다.
 nvidia-smi
-#   갱신 절차는 아래 &quot;0-1 상세&quot;를 따른다. Phase 5a까지는 이거 없이도
-#   진행되므로 병렬로 처리해도 된다.
+#   595.97 미만으로 되돌아가 있으면 아래 &quot;0-1 상세&quot;를 따른다.
 
-# 0-2. 절전 금지 + 뚜껑 닫아도 계속 돌게
-#   평소: AC 연결 + 뚜껑 열림 + 상시 가동.
-#   가끔: 뚜껑을 닫거나 전원을 끔.
-#   따라서 AC/DC 양쪽 다 설정한다. 뚜껑을 닫는 그 &#x27;가끔&#x27;이 하필
-#   배터리일 때면 AC만 설정해 둔 정책은 아무 소용이 없다.
-powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0    # AC: 아무것도 안 함
-powercfg /setdcvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0    # 배터리: 아무것도 안 함
-powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP STANDBYIDLE 0    # 절전 안 함
-powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP HIBERNATEIDLE 0  # 최대절전 안 함
+# 0-2. 절전 금지 + 뚜껑 닫아도 계속 돌게  ★ 현재 최우선 블로커
+#   실측(08-11): 구성표 &quot;HP Optimized (Modern Standby)&quot;,
+#   STANDBYIDLE = AC 300초 / DC 180초. 유휴 5분이면 잠든다.
+#   이게 살아 있는 한 상시 가동 에이전트는 성립하지 않는다.
+
+# AC: 절대 잠들지 않는다
+powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP STANDBYIDLE 0
+powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP HIBERNATEIDLE 0
+powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0     # 뚜껑 닫아도 계속
+
+# DC(배터리): 잠들게 둔다.  ← 초안에서 뒤집은 판단이다
+#   초안은 AC/DC 양쪽 다 &quot;아무것도 안 함&quot;을 권했는데 그건 위험하다.
+#   전원 없이 뚜껑 닫힌 채 절대 안 자는 노트북은 가방 안에서 과열되고
+#   배터리를 바닥낸다. 하드웨어를 지키는 쪽이 우선이다.
+#   이때 잡이 끊겨도 잃는 건 없다 — 텔레그램이 지시를 24시간 보관하고
+#   런 폴더는 이미 동결돼 있다.
+powercfg /setdcvalueindex SCHEME_CURRENT SUB_SLEEP STANDBYIDLE 1800  # 30분
+powercfg /setdcvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 1     # 절전
 
 # 화면은 꺼져도 된다 — 디스플레이 off는 연산을 멈추지 않는다.
-# 뚜껑을 열어둔 채 상시 가동하므로 15분 후 화면만 끈다 (번인·전력 낭비 방지).
-powercfg /setacvalueindex SCHEME_CURRENT SUB_VIDEO VIDEOIDLE 900
+powercfg /setacvalueindex SCHEME_CURRENT SUB_VIDEO VIDEOIDLE 900     # 15분
 
 powercfg /setactive SCHEME_CURRENT
+
+# ★ 반드시 읽어서 확인한다. 이 스킴에서는 조용히 안 먹을 수 있다.
+#   실측(08-11): `powercfg /q SCHEME_CURRENT SUB_BUTTONS LIDACTION` 이
+#   스킴 헤더만 출력하고 값이 없었다(exit 0). LIDACTION이 이 구성표에서
+#   숨김 처리되어 있기 때문이다. 값이 안 읽히면 아래로 숨김을 푼 뒤
+#   다시 set 하고 다시 읽는다.
+(powercfg /q SCHEME_CURRENT SUB_BUTTONS LIDACTION | Out-String) `
+  -split &quot;`n&quot; | Select-String -Pattern &#x27;0x[0-9a-fA-F]{8}&#x27; | Select-Object -Last 2
+#   -&gt; 아무것도 안 나오면:
+#      SUB_BUTTONS = 4f971e89-eebd-4455-a8de-9e59040e7347
+#      LIDACTION   = 5ca83367-6e45-459f-a27b-476b1d01c936
+powercfg /attributes 4f971e89-eebd-4455-a8de-9e59040e7347 `
+                     5ca83367-6e45-459f-a27b-476b1d01c936 -ATTRIB_HIDE
+#   그다음 위의 setacvalueindex / setdcvalueindex 두 줄을 다시 실행하고
+#   다시 읽어서 AC=0x00000000, DC=0x00000001 인지 확인한다.
 
 # 0-3. 최신 대기 모드(S0) 확인.
 #   S0로 동작하면 &#x27;절전 안 함&#x27;으로 설정해도 뚜껑을 닫았을 때 OS가
@@ -2179,8 +2202,8 @@ wsl bash -lc &quot;cd /mnt/d/agent/repos/dev-standard-template &amp;&amp; ./scri
 <td>추정이 맞았음</td>
 </tr>
 <tr>
-<td><strong>GPU 드라이버 591.66</strong> — Isaac Sim 6.0.1 최소 595.97 미만</td>
-<td><strong>블로커</strong></td>
+<td>GPU 드라이버 → <strong>595.97</strong> (08-11 갱신)</td>
+<td>블로커 해소</td>
 </tr>
 <tr>
 <td><strong>Intel 내장 GPU 동시 존재</strong> (하이브리드)</td>
@@ -2223,8 +2246,8 @@ wsl bash -lc &quot;cd /mnt/d/agent/repos/dev-standard-template &amp;&amp; ./scri
 <td><strong>미확인이지 없는 게 아니다.</strong> 1차 점검이 영어 문자열 <code>Found</code>를 한국어 출력에 매칭해 전부 NOT FOUND로 잘못 보고했다. 스크립트는 종료 코드 기반으로 고쳤다 — Phase 1에서 <code>winget show --id &lt;ID&gt; -e</code> 종료 코드로 판정</td>
 </tr>
 <tr>
-<td>⚠ 뚜껑·절전 인덱스 현재값</td>
-<td>같은 로케일 버그로 읽지 못했다. Phase 0에서 <strong>어차피 무조건 설정</strong>하므로 블로커는 아니다</td>
+<td>~~⚠ 뚜껑·절전 인덱스 현재값~~</td>
+<td><strong>08-11 해결, 그리고 진단이 틀렸었다.</strong> 사전 점검은 이걸 "로케일 버그로 못 읽음"으로 남겼다. 로케일 버그는 실재했고 실제로 예외를 던졌지만, <strong>파서를 고쳐도 이 기계에서는 값이 안 나온다</strong> — <code>LIDACTION</code>이 "HP Optimized" 구성표에서 <strong>숨김</strong> 처리되어 있기 때문이다. 결함 두 개가 겹쳐 있었고 하나만 진단했다. 실측: <code>STANDBYIDLE</code> = AC 300초 / DC 180초, 즉 <strong>지금도 5분이면 잠든다.</strong> Phase 0-2에 숨김 해제 절차를 넣었다</td>
 </tr>
 <tr>
 <td>⚠ §4.1의 VRAM 소비량 수치</td>

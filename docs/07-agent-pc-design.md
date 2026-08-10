@@ -109,7 +109,7 @@
 | 항목 | 실측값 | 초안의 추정 |
 |---|---|---|
 | GPU | **NVIDIA RTX PRO 5000 Blackwell Generation Laptop GPU, 24463 MiB** | ✅ 맞음 |
-| GPU 드라이버 | **591.66** | ❌ **블로커** — Isaac Sim 6.0.1은 595.97 이상 필요 |
+| GPU 드라이버 | **595.97** (08-11 갱신 완료. 최초 실측은 591.66) | ✅ **블로커 해소.** Isaac Sim 6.0.1 요구값 정확히 충족 |
 | 내장 GPU | **Intel Graphics 동시 존재 (하이브리드)** | ❌ 예상 못 함 — 아래 4번 |
 | CPU | **Core Ultra 9 285HX**, 24물리 / 24논리 (SMT 없음) | ⚠ 275HX로 추정했으나 285HX |
 | RAM | **127 GB** | ✅ 맞음 |
@@ -122,7 +122,7 @@
 
 1. **경로가 `C:\agent`로 바뀌었다.** D: 드라이브가 없다. 대신 C:에 1,795 GB가 비어 있어 §5의 270 GB 예산을 훨씬 넘는다 — **Isaac Sim 에셋 완전팩까지 여유롭게 들어간다.** 이 문서 전체는 `C:\agent` 기준으로 이미 갱신했다.
 
-2. **드라이버 591.66은 블로커다.** Phase 6 전에 595.97 이상으로 올려야 한다. Phase 5a까지는 진행 가능하므로 병렬로 처리한다.
+2. ~~드라이버 591.66은 블로커다~~ → **08-11 갱신 완료(595.97).** 해소됐다. 대신 **절전 정책이 새 최우선 블로커**다 — 이 PC는 지금도 유휴 5분이면 잠든다 (Phase 0-2).
 
 3. **하이브리드 그래픽이다.** Intel 내장 GPU가 함께 있다. Isaac Sim이 내장 GPU에 붙으면 실패한다 — 설정 → 시스템 → 디스플레이 → 그래픽에서 `isaac-sim.bat`과 `python.bat`을 **고성능(NVIDIA)** 으로 고정한다.
 
@@ -132,7 +132,8 @@
 
 **이것이 설계에 미치는 영향 — 데스크톱이었다면 없었을 제약 3개:**
 
-1. **뚜껑을 닫아도 절대 잠들면 안 된다.** Windows 기본값은 뚜껑 닫으면 절전이고, 이 기본값 하나로 상시 가동이 무너진다. AC/DC 양쪽 다 "아무것도 안 함"으로 바꾼다 (Phase 0). 반면 **화면은 꺼져도 무방하다** — 디스플레이 off는 연산을 멈추지 않는다. 뚜껑을 열어둔 채 상시 가동하므로 화면만 15분 뒤 끈다.
+1. **AC에서는 절대 잠들면 안 된다.** 실측 결과 이 PC는 지금도 유휴 **5분**이면 잠든다("HP Optimized" 구성표, `STANDBYIDLE` AC 300초 / DC 180초). 이 한 줄 때문에 상시 가동이 성립하지 않으므로 Phase 0-2가 **현재 최우선 블로커**다. 반면 **화면은 꺼져도 무방하다** — 디스플레이 off는 연산을 멈추지 않는다.
+   **배터리에서는 반대로 잠들게 둔다.** 초안은 AC/DC 양쪽 다 "아무것도 안 함"을 권했는데, 그건 뒤집었다 — 전원 없이 뚜껑 닫힌 채 절대 안 자는 노트북은 가방 안에서 과열되고 배터리를 바닥낸다. 그렇게 잡이 끊겨도 잃는 건 없다: 텔레그램이 지시를 24시간 보관하고 런 폴더는 이미 동결돼 있다.
 2. **발열·클럭 스로틀링이 실재한다.** 상시 가동 + Isaac Sim RTX 렌더는 노트북 쿨링에 부담이고, 뚜껑을 닫으면 배기가 더 나빠진다. → 기본 모드를 **headless**로 두고 GUI는 필요할 때만 (§4). 무거운 잡은 뚜껑을 열고 돌린다.
 3. **전원이 빠지면 배터리 모드로 떨어진다.** 평소 AC이므로 예외 상황이지만, 배터리에서는 GPU 클럭이 급감한다. Conductor가 배터리를 감지하면 SIM 모드가 필요한 잡을 큐에 보류하고 텔레그램으로 알린다 (Phase 11-3).
 
@@ -1037,26 +1038,48 @@ flowchart TD
 ```powershell
 # 관리자 PowerShell
 
-# 0-1. GPU 드라이버 — 실측 591.66, 필요 595.97+. 이게 유일한 블로커다.
+# 0-1. GPU 드라이버 — 08-11에 595.97로 갱신 완료. 확인만 한다.
 nvidia-smi
-#   갱신 절차는 아래 "0-1 상세"를 따른다. Phase 5a까지는 이거 없이도
-#   진행되므로 병렬로 처리해도 된다.
+#   595.97 미만으로 되돌아가 있으면 아래 "0-1 상세"를 따른다.
 
-# 0-2. 절전 금지 + 뚜껑 닫아도 계속 돌게
-#   평소: AC 연결 + 뚜껑 열림 + 상시 가동.
-#   가끔: 뚜껑을 닫거나 전원을 끔.
-#   따라서 AC/DC 양쪽 다 설정한다. 뚜껑을 닫는 그 '가끔'이 하필
-#   배터리일 때면 AC만 설정해 둔 정책은 아무 소용이 없다.
-powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0    # AC: 아무것도 안 함
-powercfg /setdcvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0    # 배터리: 아무것도 안 함
-powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP STANDBYIDLE 0    # 절전 안 함
-powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP HIBERNATEIDLE 0  # 최대절전 안 함
+# 0-2. 절전 금지 + 뚜껑 닫아도 계속 돌게  ★ 현재 최우선 블로커
+#   실측(08-11): 구성표 "HP Optimized (Modern Standby)",
+#   STANDBYIDLE = AC 300초 / DC 180초. 유휴 5분이면 잠든다.
+#   이게 살아 있는 한 상시 가동 에이전트는 성립하지 않는다.
+
+# AC: 절대 잠들지 않는다
+powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP STANDBYIDLE 0
+powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP HIBERNATEIDLE 0
+powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0     # 뚜껑 닫아도 계속
+
+# DC(배터리): 잠들게 둔다.  ← 초안에서 뒤집은 판단이다
+#   초안은 AC/DC 양쪽 다 "아무것도 안 함"을 권했는데 그건 위험하다.
+#   전원 없이 뚜껑 닫힌 채 절대 안 자는 노트북은 가방 안에서 과열되고
+#   배터리를 바닥낸다. 하드웨어를 지키는 쪽이 우선이다.
+#   이때 잡이 끊겨도 잃는 건 없다 — 텔레그램이 지시를 24시간 보관하고
+#   런 폴더는 이미 동결돼 있다.
+powercfg /setdcvalueindex SCHEME_CURRENT SUB_SLEEP STANDBYIDLE 1800  # 30분
+powercfg /setdcvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 1     # 절전
 
 # 화면은 꺼져도 된다 — 디스플레이 off는 연산을 멈추지 않는다.
-# 뚜껑을 열어둔 채 상시 가동하므로 15분 후 화면만 끈다 (번인·전력 낭비 방지).
-powercfg /setacvalueindex SCHEME_CURRENT SUB_VIDEO VIDEOIDLE 900
+powercfg /setacvalueindex SCHEME_CURRENT SUB_VIDEO VIDEOIDLE 900     # 15분
 
 powercfg /setactive SCHEME_CURRENT
+
+# ★ 반드시 읽어서 확인한다. 이 스킴에서는 조용히 안 먹을 수 있다.
+#   실측(08-11): `powercfg /q SCHEME_CURRENT SUB_BUTTONS LIDACTION` 이
+#   스킴 헤더만 출력하고 값이 없었다(exit 0). LIDACTION이 이 구성표에서
+#   숨김 처리되어 있기 때문이다. 값이 안 읽히면 아래로 숨김을 푼 뒤
+#   다시 set 하고 다시 읽는다.
+(powercfg /q SCHEME_CURRENT SUB_BUTTONS LIDACTION | Out-String) `
+  -split "`n" | Select-String -Pattern '0x[0-9a-fA-F]{8}' | Select-Object -Last 2
+#   -> 아무것도 안 나오면:
+#      SUB_BUTTONS = 4f971e89-eebd-4455-a8de-9e59040e7347
+#      LIDACTION   = 5ca83367-6e45-459f-a27b-476b1d01c936
+powercfg /attributes 4f971e89-eebd-4455-a8de-9e59040e7347 `
+                     5ca83367-6e45-459f-a27b-476b1d01c936 -ATTRIB_HIDE
+#   그다음 위의 setacvalueindex / setdcvalueindex 두 줄을 다시 실행하고
+#   다시 읽어서 AC=0x00000000, DC=0x00000001 인지 확인한다.
 
 # 0-3. 최신 대기 모드(S0) 확인.
 #   S0로 동작하면 '절전 안 함'으로 설정해도 뚜껑을 닫았을 때 OS가
@@ -1614,7 +1637,7 @@ wsl bash -lc "cd /mnt/d/agent/repos/dev-standard-template && \
 | GPU = RTX PRO 5000 Blackwell **Laptop** GPU, 24463 MiB | 추정이 맞았음 |
 | CPU = Core Ultra 9 **285HX**, 24물리/24논리 | 275HX 추정을 정정 |
 | RAM 127 GB, 섀시 = 랩톱 (배터리 존재) | 추정이 맞았음 |
-| **GPU 드라이버 591.66** — Isaac Sim 6.0.1 최소 595.97 미만 | **블로커** |
+| GPU 드라이버 → **595.97** (08-11 갱신) | 블로커 해소 |
 | **Intel 내장 GPU 동시 존재** (하이브리드) | 예상 못 했던 항목 |
 | **D: 볼륨 없음. C: 1,795 GB 여유** | 전제가 틀렸음 → `C:\agent` |
 | **Modern Standby(S0)만 지원.** S1/S2/S3 미지원, 최대절전 비활성 | 경고했던 그대로 |
@@ -1629,7 +1652,7 @@ wsl bash -lc "cd /mnt/d/agent/repos/dev-standard-template && \
 | 추정 | 확인 방법 |
 |---|---|
 | ⚠ winget ID 10종 | **미확인이지 없는 게 아니다.** 1차 점검이 영어 문자열 `Found `를 한국어 출력에 매칭해 전부 NOT FOUND로 잘못 보고했다. 스크립트는 종료 코드 기반으로 고쳤다 — Phase 1에서 `winget show --id <ID> -e` 종료 코드로 판정 |
-| ⚠ 뚜껑·절전 인덱스 현재값 | 같은 로케일 버그로 읽지 못했다. Phase 0에서 **어차피 무조건 설정**하므로 블로커는 아니다 |
+| ~~⚠ 뚜껑·절전 인덱스 현재값~~ | **08-11 해결, 그리고 진단이 틀렸었다.** 사전 점검은 이걸 "로케일 버그로 못 읽음"으로 남겼다. 로케일 버그는 실재했고 실제로 예외를 던졌지만, **파서를 고쳐도 이 기계에서는 값이 안 나온다** — `LIDACTION`이 "HP Optimized" 구성표에서 **숨김** 처리되어 있기 때문이다. 결함 두 개가 겹쳐 있었고 하나만 진단했다. 실측: `STANDBYIDLE` = AC 300초 / DC 180초, 즉 **지금도 5분이면 잠든다.** Phase 0-2에 숨김 해제 절차를 넣었다 |
 | ⚠ §4.1의 VRAM 소비량 수치 | 씬·모델에 따라 크게 변동. 실측 후 사실 카드로 갱신 |
 | ⚠ Ollama 모델 태그 이름 | `ollama list` / 레지스트리 |
 | ⚠ Isaac Sim 첫 기동 셰이더 컴파일 10~30분 | 실측 |
