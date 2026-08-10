@@ -97,6 +97,51 @@ cd dev-standard-template
 
 ---
 
+### 막히는 곳: `claude` 용어가 인식되지 않습니다
+
+설치는 성공했는데 명령이 안 잡히는 경우. 원인은 거의 항상 **현재 창이 옛날 PATH를
+들고 있는 것**이다. 환경 변수는 프로세스가 시작할 때 한 번 읽히고, 설치 프로그램이
+바꾼 값은 이미 열려 있는 창에 소급되지 않는다.
+
+**먼저 이것부터.** PowerShell 창을 닫고 **새로 연 다음** `claude --version`.
+
+그래도 안 되면 진단한다:
+
+```powershell
+# 1) 실제로 어디에 깔렸나
+Get-ChildItem $env:USERPROFILE -Filter claude.exe -Recurse -Depth 4 -ErrorAction SilentlyContinue |
+  Select-Object -ExpandProperty FullName
+
+# 2) 지금 창의 PATH를 저장된 값으로 새로고침 (창을 새로 열지 않고)
+$env:Path = [Environment]::GetEnvironmentVariable("Path","Machine") + ";" +
+            [Environment]::GetEnvironmentVariable("Path","User")
+claude --version
+```
+
+2번으로 잡히면 원인은 PATH 새로고침이었고, 다음부터는 새 창만 열면 된다.
+
+1번이 경로를 찾았는데 2번이 여전히 실패하면, 설치 프로그램이 PATH 등록에 실패한
+것이다. 찾은 경로의 **폴더**를 직접 등록한다:
+
+```powershell
+$bin = "$env:USERPROFILE\.local\bin"      # 1번이 알려준 실제 폴더로 바꾼다
+[Environment]::SetEnvironmentVariable(
+  "Path", [Environment]::GetEnvironmentVariable("Path","User") + ";$bin", "User")
+# 새 창을 열고 확인
+```
+
+1번이 아무것도 못 찾으면 설치가 실제로는 안 된 것이다. winget으로 다시 깐다:
+
+```powershell
+winget install --id Anthropic.ClaudeCode -e --accept-package-agreements --accept-source-agreements
+$LASTEXITCODE      # 0 이면 성공. 한국어 출력이라 문자열로 판단하지 말 것
+```
+
+> **관리자 PowerShell에서 작업하지 마라.** 프롬프트가 `PS C:\windows\system32>` 라면
+> 관리자 창이다. Claude Code는 일반 사용자 권한으로 돌리고, 작업 폴더도
+> `system32`가 아니라 clone한 repo 안이어야 한다. Phase 0의 `powercfg`처럼 관리자가
+> 필요한 명령만 따로 관리자 창에서 실행한다.
+
 ## ④ 인수인계
 
 ```powershell
