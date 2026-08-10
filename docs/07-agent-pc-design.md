@@ -17,7 +17,8 @@
 | Obsidian이 뭔지 하나도 모르겠다 | [§6](#6-obsidian-완전-입문) |
 | 환각은 어떻게 막나 | [§9](#9-도메인-워크스페이스-스키마--환각-방지-규약) |
 | 에이전트가 혼자 어떻게 도나 | [§10](#10-루프-엔지니어링--상태기계), [§11](#11-그래프-엔지니어링--도메인별-dag) |
-| **뭐부터 깔면 되나** | [§13](#13-단계별-구축-순서) ← 실제 작업은 여기 |
+| **지금 당장 내가 뭘 해야 하나** | [§17](#17-지금-당장-사람이-할-일) ← 여기부터 |
+| 뭐부터 깔면 되나 | [§13](#13-단계별-구축-순서) |
 | 뭘 가입해야 하나 | [§14](#14-필요-계정과-키-목록) |
 | 이 문서에서 뭐가 검증됐고 뭐가 추정인가 | [§15](#15-검증된-것과-추정인-것) |
 
@@ -94,11 +95,15 @@
 | "뚜껑 닫혀 있고" | **모바일 워크스테이션(노트북)** | 결정적 단서 |
 | 128GB RAM | SODIMM 2×64GB | HX 플랫폼 최대치 |
 
+**운용 전제 (사용자 확인):** 평소에는 **AC 연결 + 뚜껑 열림 + 절전 없이 상시 가동.** 다만 **가끔 뚜껑을 닫거나 전원을 끈다.**
+
 **이것이 설계에 미치는 영향 — 데스크톱이었다면 없었을 제약 3개:**
 
-1. **뚜껑을 닫아도 절대 잠들면 안 된다.** Windows 기본값은 뚜껑 닫으면 절전. 전원 정책을 강제로 바꿔야 한다 (Phase 0).
-2. **발열·클럭 스로틀링이 실재한다.** 상시 가동 + Isaac Sim RTX 렌더는 노트북 쿨링에 부담. → 기본 모드를 **headless**로 두고 GUI는 필요할 때만 (§4).
-3. **전원이 빠지면 배터리 모드로 떨어진다.** 배터리에서 GPU 클럭이 급감하고, 일부 정책은 AC 전용이다. 배터리 감지 시 무거운 잡을 큐에 넣고 대기하는 로직이 필요하다.
+1. **뚜껑을 닫아도 절대 잠들면 안 된다.** Windows 기본값은 뚜껑 닫으면 절전이고, 이 기본값 하나로 상시 가동이 무너진다. AC/DC 양쪽 다 "아무것도 안 함"으로 바꾼다 (Phase 0). 반면 **화면은 꺼져도 무방하다** — 디스플레이 off는 연산을 멈추지 않는다. 뚜껑을 열어둔 채 상시 가동하므로 화면만 15분 뒤 끈다.
+2. **발열·클럭 스로틀링이 실재한다.** 상시 가동 + Isaac Sim RTX 렌더는 노트북 쿨링에 부담이고, 뚜껑을 닫으면 배기가 더 나빠진다. → 기본 모드를 **headless**로 두고 GUI는 필요할 때만 (§4). 무거운 잡은 뚜껑을 열고 돌린다.
+3. **전원이 빠지면 배터리 모드로 떨어진다.** 평소 AC이므로 예외 상황이지만, 배터리에서는 GPU 클럭이 급감한다. Conductor가 배터리를 감지하면 SIM 모드가 필요한 잡을 큐에 보류하고 텔레그램으로 알린다 (Phase 11-3).
+
+**"가끔 끈다"는 설계상 두 곳에서 흡수된다.** 꺼져 있는 동안의 지시는 Cloudflare Worker가 받아 큐에 쌓고 "PC 꺼짐"으로 즉답하며(§8), 다시 켜지면 Conductor의 첫 하트비트에서 밀린 지시를 일괄 수령한다. **PC를 꺼도 지시는 유실되지 않는다.**
 
 ### Isaac Sim 6.0.1 요구사항 대비 위치
 
@@ -900,14 +905,27 @@ flowchart TD
 nvidia-smi
 # Driver Version이 595.97 미만이면 NVIDIA 앱 또는 nvidia.com에서 갱신
 
-# 0-2. 뚜껑 닫아도 안 잠들게 (AC 전원 기준)
-powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0    # 아무것도 안 함
+# 0-2. 절전 금지 + 뚜껑 닫아도 계속 돌게
+#   평소: AC 연결 + 뚜껑 열림 + 상시 가동.
+#   가끔: 뚜껑을 닫거나 전원을 끔.
+#   따라서 AC/DC 양쪽 다 설정한다. 뚜껑을 닫는 그 '가끔'이 하필
+#   배터리일 때면 AC만 설정해 둔 정책은 아무 소용이 없다.
+powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0    # AC: 아무것도 안 함
+powercfg /setdcvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0    # 배터리: 아무것도 안 함
 powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP STANDBYIDLE 0    # 절전 안 함
 powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP HIBERNATEIDLE 0  # 최대절전 안 함
-powercfg /setacvalueindex SCHEME_CURRENT SUB_VIDEO VIDEOIDLE 0      # 화면만 꺼지게 하려면 값 조정
+
+# 화면은 꺼져도 된다 — 디스플레이 off는 연산을 멈추지 않는다.
+# 뚜껑을 열어둔 채 상시 가동하므로 15분 후 화면만 끈다 (번인·전력 낭비 방지).
+powercfg /setacvalueindex SCHEME_CURRENT SUB_VIDEO VIDEOIDLE 900
+
 powercfg /setactive SCHEME_CURRENT
 
-# 0-3. 최신 대기 모드(S0) 때문에 뚜껑 닫으면 깨어있어도 스로틀링될 수 있음 — 확인
+# 0-3. 최신 대기 모드(S0) 확인.
+#   S0로 동작하면 '절전 안 함'으로 설정해도 뚜껑을 닫았을 때 OS가
+#   저전력 상태로 내려보내며 클럭을 깎을 수 있다. 아래 출력에
+#   "Standby (S0 Low Power Idle)"가 보이면 뚜껑 닫은 채 장시간 도는
+#   잡은 성능이 떨어질 수 있으니, 무거운 잡은 뚜껑 열고 돌린다.
 powercfg /a
 
 # 0-4. WSL2
@@ -1348,7 +1366,7 @@ wsl bash -lc "cd /mnt/d/agent/repos/dev-standard-template && \
 
 | # | 산출물 | 내용 |
 |---|---|---|
-| 1 | `bootstrap/00-preflight.ps1` | 네트워크·GPU·드라이버·디스크 사전 점검. **가장 먼저 실행** |
+| 1 | `bootstrap/00-preflight.ps1` | ✅ **작성 완료.** §15의 ⚠ 추정 7건을 사실로 바꾼다. 섀시(랩톱/데스크톱)·GPU·드라이버·디스크·전원정책·winget ID·네트워크 도달성을 읽고 `preflight-report.txt`로 출력. **가장 먼저 실행** |
 | 2 | `bootstrap/01-windows-base.ps1` | Phase 0–1 자동화 |
 | 3 | `bootstrap/02-claude-obsidian.ps1` | Phase 2–3 자동화 + 볼트 스켈레톤 |
 | 4 | `bootstrap/worker/` | Cloudflare Worker 소스 + `wrangler.toml` |
@@ -1359,3 +1377,75 @@ wsl bash -lc "cd /mnt/d/agent/repos/dev-standard-template && \
 
 **권장 순서:** ①로 사전 점검 → 막히는 게 없으면 ②③으로 기본 환경 → ④⑤로 텔레그램 왕복 성립 → 그다음 Isaac Sim.
 Isaac Sim을 먼저 깔면 다운로드 몇 시간 동안 다른 걸 못 한다. **텔레그램 왕복이 먼저 서야** Isaac 다운로드 중에도 폰으로 진행 상황을 볼 수 있다.
+
+---
+
+## 17. 지금 당장 사람이 할 일
+
+Claude Code는 아직 이 PC에 없다. 따라서 **처음 세 가지는 사람이 직접 해야 하고**, 그 뒤부터 에이전트가 넘겨받는다.
+
+```mermaid
+flowchart LR
+    A["① 사전 점검<br/>00-preflight.ps1<br/>⏱ 3분"] --> B["② 계정 2개<br/>텔레그램 봇<br/>Cloudflare<br/>⏱ 10분"]
+    B --> C["③ Claude Code 설치<br/>명령 한 줄<br/>⏱ 5분"]
+    C --> D["④ 여기서부터<br/>에이전트가 인수<br/>Phase 0–11"]
+    
+    style A fill:#c62828,color:#fff
+    style B fill:#ef6c00,color:#fff
+    style C fill:#1565c0,color:#fff
+    style D fill:#2e7d32,color:#fff
+```
+
+### ① 사전 점검 — 가장 먼저, 예외 없이
+
+```powershell
+# 일반 PowerShell 창이면 된다. 관리자 권한 불필요. 시스템을 건드리지 않는다.
+cd $env:USERPROFILE\Downloads
+curl.exe -L -o 00-preflight.ps1 `
+  https://raw.githubusercontent.com/kkw071223-ai/dev-standard-template/claude/omniverse-agents-skills-analysis-gc40zw/bootstrap/00-preflight.ps1
+powershell -ExecutionPolicy Bypass -File .\00-preflight.ps1
+```
+
+`preflight-report.txt`가 생긴다. **이 파일을 먼저 보내라.** §15의 ⚠ 7건이 사실로 바뀌기 전에는 그 뒤 단계를 설계대로 진행할 수 없다.
+
+특히 이 두 줄을 확인한다:
+
+```
+api.telegram.org  (CRITICAL)     reachable (200)
+workers.dev       (CRITICAL)     reachable (200)
+```
+
+둘 중 하나라도 `BLOCKED`이면 §8의 텔레그램 채널이 성립하지 않는다. 사내 프록시가 막는 경우이며, **그때는 설계를 바꿔야 한다** — 되는 척 진행하면 Phase 5에서 몇 시간을 버린다.
+
+### ② 계정 2개 — 사람만 할 수 있는 일
+
+| 할 일 | 방법 | 결과물 |
+|---|---|---|
+| 텔레그램 봇 생성 | 텔레그램에서 `@BotFather` 검색 → `/newbot` → 이름 입력 | 봇 토큰 (`123456:ABC-...`) |
+| 내 chat_id 확인 | 만든 봇과 대화 시작(아무 말) → 브라우저에서 `https://api.telegram.org/bot<토큰>/getUpdates` | `"chat":{"id":숫자}` |
+| Cloudflare 가입 | dash.cloudflare.com — 무료, **결제수단 불요** | 계정 |
+
+OAuth·2FA·이메일 인증이 걸려 있어 에이전트가 대신 못 한다. 토큰은 `%USERPROFILE%\.agent\secrets.env`에만 둔다.
+
+### ③ Claude Code 설치 — 명령 한 줄
+
+```powershell
+irm https://claude.ai/install.ps1 | iex
+claude --version
+claude          # 브라우저가 열린다. Claude Max 계정으로 로그인
+```
+
+### ④ 인수인계
+
+설치가 끝나면 작업 폴더에서 Claude Code를 열고 이렇게 지시한다:
+
+```
+D:\agent\repos\dev-standard-template 를 clone하고
+docs/07-agent-pc-design.md 를 읽어라.
+bootstrap/preflight-report.txt 가 실측 결과다 — §15의 ⚠ 항목은
+이 파일로 대체하고, 문서의 추정값을 그대로 믿지 마라.
+Phase 0부터 순서대로 진행하되, 각 Phase의 "✔ 확인"을 통과하지 못하면
+멈추고 보고하라. 통과 여부는 명령 출력 원문으로 판단한다.
+```
+
+**Phase 5(텔레그램 왕복)까지 서면 그 다음부터는 폰으로 지시할 수 있다.** Isaac Sim은 다운로드만 몇 시간이므로 반드시 그 뒤에 시작한다 — 그래야 받는 동안 폰으로 진행 상황을 본다.

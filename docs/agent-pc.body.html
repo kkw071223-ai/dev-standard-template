@@ -24,7 +24,7 @@
   <div class="slug"><b>07 · 에이전트 PC 설계</b></div>
   <h1>07 — 상시 가동 에이전트 PC 설계서</h1>
   <p class="lede">대상: <b>Windows 11 Pro만 깔려 있고 Claude Desktop 하나만 설치된 모바일 워크스테이션</b><br>목표: 이 PC를 <b>제2의 뇌 + 상시 가동 자율 에이전트</b>로 만든다.<br>기준일: <b>2026-08-10</b><br>이 문서는 설계서다. 구현 스크립트는 `bootstrap/` (Phase 13에서 생성)에 들어간다.</p>
-  <nav class="toc"><ol><li><a href="#0-이-문서를-읽는-법"><span class="n">0</span>이 문서를 읽는 법</a></li><li><a href="#1-2026-08-10-기준-nvidia-스택-현황"><span class="n">1</span>2026-08-10 기준 NVIDIA 스택 현황</a></li><li><a href="#2-하드웨어-판독--당신의-pc가-실제로-무엇인가"><span class="n">2</span>하드웨어 판독 — 당신의 PC가 실제로 무엇인가</a></li><li><a href="#3-전체-시스템-구성도"><span class="n">3</span>전체 시스템 구성도</a></li><li><a href="#4-vram-24gb-예산-설계"><span class="n">4</span>VRAM 24GB 예산 설계</a></li><li><a href="#5-디스크와-디렉터리-레이아웃"><span class="n">5</span>디스크와 디렉터리 레이아웃</a></li><li><a href="#6-obsidian-완전-입문"><span class="n">6</span>Obsidian 완전 입문</a></li><li><a href="#7-notion-역할과-스키마"><span class="n">7</span>Notion 역할과 스키마</a></li><li><a href="#8-텔레그램-io와-pc-꺼짐-응답-설계"><span class="n">8</span>텔레그램 I/O와 &quot;PC 꺼짐&quot; 응답 설계</a></li><li><a href="#9-도메인-워크스페이스-스키마--환각-방지-규약"><span class="n">9</span>도메인 워크스페이스 스키마 — 환각 방지 규약</a></li><li><a href="#10-루프-엔지니어링--상태기계"><span class="n">10</span>루프 엔지니어링 — 상태기계</a></li><li><a href="#11-그래프-엔지니어링--도메인별-dag"><span class="n">11</span>그래프 엔지니어링 — 도메인별 DAG</a></li><li><a href="#12-자율성-경계"><span class="n">12</span>자율성 경계</a></li><li><a href="#13-단계별-구축-순서"><span class="n">13</span>단계별 구축 순서</a></li><li><a href="#14-필요-계정과-키-목록"><span class="n">14</span>필요 계정과 키 목록</a></li><li><a href="#15-검증된-것과-추정인-것"><span class="n">15</span>검증된 것과 추정인 것</a></li><li><a href="#16-다음-단계"><span class="n">16</span>다음 단계</a></li></ol></nav>
+  <nav class="toc"><ol><li><a href="#0-이-문서를-읽는-법"><span class="n">0</span>이 문서를 읽는 법</a></li><li><a href="#1-2026-08-10-기준-nvidia-스택-현황"><span class="n">1</span>2026-08-10 기준 NVIDIA 스택 현황</a></li><li><a href="#2-하드웨어-판독--당신의-pc가-실제로-무엇인가"><span class="n">2</span>하드웨어 판독 — 당신의 PC가 실제로 무엇인가</a></li><li><a href="#3-전체-시스템-구성도"><span class="n">3</span>전체 시스템 구성도</a></li><li><a href="#4-vram-24gb-예산-설계"><span class="n">4</span>VRAM 24GB 예산 설계</a></li><li><a href="#5-디스크와-디렉터리-레이아웃"><span class="n">5</span>디스크와 디렉터리 레이아웃</a></li><li><a href="#6-obsidian-완전-입문"><span class="n">6</span>Obsidian 완전 입문</a></li><li><a href="#7-notion-역할과-스키마"><span class="n">7</span>Notion 역할과 스키마</a></li><li><a href="#8-텔레그램-io와-pc-꺼짐-응답-설계"><span class="n">8</span>텔레그램 I/O와 &quot;PC 꺼짐&quot; 응답 설계</a></li><li><a href="#9-도메인-워크스페이스-스키마--환각-방지-규약"><span class="n">9</span>도메인 워크스페이스 스키마 — 환각 방지 규약</a></li><li><a href="#10-루프-엔지니어링--상태기계"><span class="n">10</span>루프 엔지니어링 — 상태기계</a></li><li><a href="#11-그래프-엔지니어링--도메인별-dag"><span class="n">11</span>그래프 엔지니어링 — 도메인별 DAG</a></li><li><a href="#12-자율성-경계"><span class="n">12</span>자율성 경계</a></li><li><a href="#13-단계별-구축-순서"><span class="n">13</span>단계별 구축 순서</a></li><li><a href="#14-필요-계정과-키-목록"><span class="n">14</span>필요 계정과 키 목록</a></li><li><a href="#15-검증된-것과-추정인-것"><span class="n">15</span>검증된 것과 추정인 것</a></li><li><a href="#16-다음-단계"><span class="n">16</span>다음 단계</a></li><li><a href="#17-지금-당장-사람이-할-일"><span class="n">17</span>지금 당장 사람이 할 일</a></li></ol></nav>
 </div></div></header>
 
 <section id="0-이-문서를-읽는-법"><div class="wrap"><div class="s-head"><span class="n">0</span><h2>이 문서를 읽는 법</h2></div><div class="col-wide"><div class="tw"><table>
@@ -60,8 +60,12 @@
 <td><a href="#10-루프-엔지니어링--상태기계">§10</a>, <a href="#11-그래프-엔지니어링--도메인별-dag">§11</a></td>
 </tr>
 <tr>
-<td><strong>뭐부터 깔면 되나</strong></td>
-<td><a href="#13-단계별-구축-순서">§13</a> ← 실제 작업은 여기</td>
+<td><strong>지금 당장 내가 뭘 해야 하나</strong></td>
+<td><a href="#17-지금-당장-사람이-할-일">§17</a> ← 여기부터</td>
+</tr>
+<tr>
+<td>뭐부터 깔면 되나</td>
+<td><a href="#13-단계별-구축-순서">§13</a></td>
 </tr>
 <tr>
 <td>뭘 가입해야 하나</td>
@@ -253,12 +257,14 @@
 </tr>
 </tbody>
 </table></div>
+<p><strong>운용 전제 (사용자 확인):</strong> 평소에는 <strong>AC 연결 + 뚜껑 열림 + 절전 없이 상시 가동.</strong> 다만 <strong>가끔 뚜껑을 닫거나 전원을 끈다.</strong></p>
 <p><strong>이것이 설계에 미치는 영향 — 데스크톱이었다면 없었을 제약 3개:</strong></p>
 <ol>
-<li><strong>뚜껑을 닫아도 절대 잠들면 안 된다.</strong> Windows 기본값은 뚜껑 닫으면 절전. 전원 정책을 강제로 바꿔야 한다 (Phase 0).</li>
-<li><strong>발열·클럭 스로틀링이 실재한다.</strong> 상시 가동 + Isaac Sim RTX 렌더는 노트북 쿨링에 부담. → 기본 모드를 <strong>headless</strong>로 두고 GUI는 필요할 때만 (§4).</li>
-<li><strong>전원이 빠지면 배터리 모드로 떨어진다.</strong> 배터리에서 GPU 클럭이 급감하고, 일부 정책은 AC 전용이다. 배터리 감지 시 무거운 잡을 큐에 넣고 대기하는 로직이 필요하다.</li>
+<li><strong>뚜껑을 닫아도 절대 잠들면 안 된다.</strong> Windows 기본값은 뚜껑 닫으면 절전이고, 이 기본값 하나로 상시 가동이 무너진다. AC/DC 양쪽 다 "아무것도 안 함"으로 바꾼다 (Phase 0). 반면 <strong>화면은 꺼져도 무방하다</strong> — 디스플레이 off는 연산을 멈추지 않는다. 뚜껑을 열어둔 채 상시 가동하므로 화면만 15분 뒤 끈다.</li>
+<li><strong>발열·클럭 스로틀링이 실재한다.</strong> 상시 가동 + Isaac Sim RTX 렌더는 노트북 쿨링에 부담이고, 뚜껑을 닫으면 배기가 더 나빠진다. → 기본 모드를 <strong>headless</strong>로 두고 GUI는 필요할 때만 (§4). 무거운 잡은 뚜껑을 열고 돌린다.</li>
+<li><strong>전원이 빠지면 배터리 모드로 떨어진다.</strong> 평소 AC이므로 예외 상황이지만, 배터리에서는 GPU 클럭이 급감한다. Conductor가 배터리를 감지하면 SIM 모드가 필요한 잡을 큐에 보류하고 텔레그램으로 알린다 (Phase 11-3).</li>
 </ol>
+<p><strong>"가끔 끈다"는 설계상 두 곳에서 흡수된다.</strong> 꺼져 있는 동안의 지시는 Cloudflare Worker가 받아 큐에 쌓고 "PC 꺼짐"으로 즉답하며(§8), 다시 켜지면 Conductor의 첫 하트비트에서 밀린 지시를 일괄 수령한다. <strong>PC를 꺼도 지시는 유실되지 않는다.</strong></p>
 <h3 id="isaac-sim-601-요구사항-대비-위치">Isaac Sim 6.0.1 요구사항 대비 위치</h3>
 <div class="tw"><table>
 <thead>
@@ -1335,14 +1341,27 @@ Claude Code — 실제 패치 작성          ← 여기서만 Claude 사용</pr
 nvidia-smi
 # Driver Version이 595.97 미만이면 NVIDIA 앱 또는 nvidia.com에서 갱신
 
-# 0-2. 뚜껑 닫아도 안 잠들게 (AC 전원 기준)
-powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0    # 아무것도 안 함
+# 0-2. 절전 금지 + 뚜껑 닫아도 계속 돌게
+#   평소: AC 연결 + 뚜껑 열림 + 상시 가동.
+#   가끔: 뚜껑을 닫거나 전원을 끔.
+#   따라서 AC/DC 양쪽 다 설정한다. 뚜껑을 닫는 그 &#x27;가끔&#x27;이 하필
+#   배터리일 때면 AC만 설정해 둔 정책은 아무 소용이 없다.
+powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0    # AC: 아무것도 안 함
+powercfg /setdcvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0    # 배터리: 아무것도 안 함
 powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP STANDBYIDLE 0    # 절전 안 함
 powercfg /setacvalueindex SCHEME_CURRENT SUB_SLEEP HIBERNATEIDLE 0  # 최대절전 안 함
-powercfg /setacvalueindex SCHEME_CURRENT SUB_VIDEO VIDEOIDLE 0      # 화면만 꺼지게 하려면 값 조정
+
+# 화면은 꺼져도 된다 — 디스플레이 off는 연산을 멈추지 않는다.
+# 뚜껑을 열어둔 채 상시 가동하므로 15분 후 화면만 끈다 (번인·전력 낭비 방지).
+powercfg /setacvalueindex SCHEME_CURRENT SUB_VIDEO VIDEOIDLE 900
+
 powercfg /setactive SCHEME_CURRENT
 
-# 0-3. 최신 대기 모드(S0) 때문에 뚜껑 닫으면 깨어있어도 스로틀링될 수 있음 — 확인
+# 0-3. 최신 대기 모드(S0) 확인.
+#   S0로 동작하면 &#x27;절전 안 함&#x27;으로 설정해도 뚜껑을 닫았을 때 OS가
+#   저전력 상태로 내려보내며 클럭을 깎을 수 있다. 아래 출력에
+#   &quot;Standby (S0 Low Power Idle)&quot;가 보이면 뚜껑 닫은 채 장시간 도는
+#   잡은 성능이 떨어질 수 있으니, 무거운 잡은 뚜껑 열고 돌린다.
 powercfg /a
 
 # 0-4. WSL2
@@ -1809,7 +1828,7 @@ wsl bash -lc &quot;cd /mnt/d/agent/repos/dev-standard-template &amp;&amp; ./scri
 <tr>
 <td>1</td>
 <td><code>bootstrap/00-preflight.ps1</code></td>
-<td>네트워크·GPU·드라이버·디스크 사전 점검. <strong>가장 먼저 실행</strong></td>
+<td>✅ <strong>작성 완료.</strong> §15의 ⚠ 추정 7건을 사실로 바꾼다. 섀시(랩톱/데스크톱)·GPU·드라이버·디스크·전원정책·winget ID·네트워크 도달성을 읽고 <code>preflight-report.txt</code>로 출력. <strong>가장 먼저 실행</strong></td>
 </tr>
 <tr>
 <td>2</td>
@@ -1849,4 +1868,66 @@ wsl bash -lc &quot;cd /mnt/d/agent/repos/dev-standard-template &amp;&amp; ./scri
 </tbody>
 </table></div>
 <p><strong>권장 순서:</strong> ①로 사전 점검 → 막히는 게 없으면 ②③으로 기본 환경 → ④⑤로 텔레그램 왕복 성립 → 그다음 Isaac Sim.
-Isaac Sim을 먼저 깔면 다운로드 몇 시간 동안 다른 걸 못 한다. <strong>텔레그램 왕복이 먼저 서야</strong> Isaac 다운로드 중에도 폰으로 진행 상황을 볼 수 있다.</p></div></div></section>
+Isaac Sim을 먼저 깔면 다운로드 몇 시간 동안 다른 걸 못 한다. <strong>텔레그램 왕복이 먼저 서야</strong> Isaac 다운로드 중에도 폰으로 진행 상황을 볼 수 있다.</p>
+<hr></div></div></section><section id="17-지금-당장-사람이-할-일"><div class="wrap"><div class="s-head"><span class="n">17</span><h2>지금 당장 사람이 할 일</h2></div><div class="col-wide"><p>Claude Code는 아직 이 PC에 없다. 따라서 <strong>처음 세 가지는 사람이 직접 해야 하고</strong>, 그 뒤부터 에이전트가 넘겨받는다.</p>
+<pre class="mermaid">flowchart LR
+    A[&quot;① 사전 점검&lt;br/&gt;00-preflight.ps1&lt;br/&gt;⏱ 3분&quot;] --&gt; B[&quot;② 계정 2개&lt;br/&gt;텔레그램 봇&lt;br/&gt;Cloudflare&lt;br/&gt;⏱ 10분&quot;]
+    B --&gt; C[&quot;③ Claude Code 설치&lt;br/&gt;명령 한 줄&lt;br/&gt;⏱ 5분&quot;]
+    C --&gt; D[&quot;④ 여기서부터&lt;br/&gt;에이전트가 인수&lt;br/&gt;Phase 0–11&quot;]
+    
+    style A fill:#c62828,color:#fff
+    style B fill:#ef6c00,color:#fff
+    style C fill:#1565c0,color:#fff
+    style D fill:#2e7d32,color:#fff</pre>
+<h3 id="①-사전-점검--가장-먼저-예외-없이">① 사전 점검 — 가장 먼저, 예외 없이</h3>
+<div class="term"><div class="term-bar"><span class="dot"></span>powershell</div><pre># 일반 PowerShell 창이면 된다. 관리자 권한 불필요. 시스템을 건드리지 않는다.
+cd $env:USERPROFILE\Downloads
+curl.exe -L -o 00-preflight.ps1 `
+  https://raw.githubusercontent.com/kkw071223-ai/dev-standard-template/claude/omniverse-agents-skills-analysis-gc40zw/bootstrap/00-preflight.ps1
+powershell -ExecutionPolicy Bypass -File .\00-preflight.ps1</pre></div>
+<p><code>preflight-report.txt</code>가 생긴다. <strong>이 파일을 먼저 보내라.</strong> §15의 ⚠ 7건이 사실로 바뀌기 전에는 그 뒤 단계를 설계대로 진행할 수 없다.</p>
+<p>특히 이 두 줄을 확인한다:</p>
+<div class="term"><div class="term-bar"><span class="dot"></span>text</div><pre>api.telegram.org  (CRITICAL)     reachable (200)
+workers.dev       (CRITICAL)     reachable (200)</pre></div>
+<p>둘 중 하나라도 <code>BLOCKED</code>이면 §8의 텔레그램 채널이 성립하지 않는다. 사내 프록시가 막는 경우이며, <strong>그때는 설계를 바꿔야 한다</strong> — 되는 척 진행하면 Phase 5에서 몇 시간을 버린다.</p>
+<h3 id="②-계정-2개--사람만-할-수-있는-일">② 계정 2개 — 사람만 할 수 있는 일</h3>
+<div class="tw"><table>
+<thead>
+<tr>
+<th>할 일</th>
+<th>방법</th>
+<th>결과물</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>텔레그램 봇 생성</td>
+<td>텔레그램에서 <code>@BotFather</code> 검색 → <code>/newbot</code> → 이름 입력</td>
+<td>봇 토큰 (<code>123456:ABC-...</code>)</td>
+</tr>
+<tr>
+<td>내 chat_id 확인</td>
+<td>만든 봇과 대화 시작(아무 말) → 브라우저에서 <code>https://api.telegram.org/bot&lt;토큰&gt;/getUpdates</code></td>
+<td><code>"chat":{"id":숫자}</code></td>
+</tr>
+<tr>
+<td>Cloudflare 가입</td>
+<td>dash.cloudflare.com — 무료, <strong>결제수단 불요</strong></td>
+<td>계정</td>
+</tr>
+</tbody>
+</table></div>
+<p>OAuth·2FA·이메일 인증이 걸려 있어 에이전트가 대신 못 한다. 토큰은 <code>%USERPROFILE%\.agent\secrets.env</code>에만 둔다.</p>
+<h3 id="③-claude-code-설치--명령-한-줄">③ Claude Code 설치 — 명령 한 줄</h3>
+<div class="term"><div class="term-bar"><span class="dot"></span>powershell</div><pre>irm https://claude.ai/install.ps1 | iex
+claude --version
+claude          # 브라우저가 열린다. Claude Max 계정으로 로그인</pre></div>
+<h3 id="④-인수인계">④ 인수인계</h3>
+<p>설치가 끝나면 작업 폴더에서 Claude Code를 열고 이렇게 지시한다:</p>
+<div class="term"><div class="term-bar"><span class="dot"></span>text</div><pre>D:\agent\repos\dev-standard-template 를 clone하고
+docs/07-agent-pc-design.md 를 읽어라.
+bootstrap/preflight-report.txt 가 실측 결과다 — §15의 ⚠ 항목은
+이 파일로 대체하고, 문서의 추정값을 그대로 믿지 마라.
+Phase 0부터 순서대로 진행하되, 각 Phase의 &quot;✔ 확인&quot;을 통과하지 못하면
+멈추고 보고하라. 통과 여부는 명령 출력 원문으로 판단한다.</pre></div>
+<p><strong>Phase 5(텔레그램 왕복)까지 서면 그 다음부터는 폰으로 지시할 수 있다.</strong> Isaac Sim은 다운로드만 몇 시간이므로 반드시 그 뒤에 시작한다 — 그래야 받는 동안 폰으로 진행 상황을 본다.</p></div></div></section>
