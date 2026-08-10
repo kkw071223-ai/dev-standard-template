@@ -19,6 +19,7 @@ with plausible-looking alternatives.
 | MCP / Kit / Isaac code | [`docs/04-mcp-setup.md`](docs/04-mcp-setup.md) |
 | planning work | [`docs/05-adoption-roadmap.md`](docs/05-adoption-roadmap.md) |
 | 2D drawing / DXF work | [`docs/06-drawing-to-simready.md`](docs/06-drawing-to-simready.md) |
+| standing up the local agent PC | [`docs/07-agent-pc-design.md`](docs/07-agent-pc-design.md) — Win11 build-out, loop/graph contracts, anti-hallucination schema |
 
 ---
 
