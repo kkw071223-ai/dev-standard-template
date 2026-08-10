@@ -121,14 +121,29 @@ claude --version
 2번으로 잡히면 원인은 PATH 새로고침이었고, 다음부터는 새 창만 열면 된다.
 
 1번이 경로를 찾았는데 2번이 여전히 실패하면, 설치 프로그램이 PATH 등록에 실패한
-것이다. 찾은 경로의 **폴더**를 직접 등록한다:
+것이다. **이 PC에서 실제로 이 경우였다** — 2026-08-10, 설치는 성공 보고를 했고
+바이너리도 `C:\Users\HP\.local\bin\claude.exe` 에 있었지만 사용자 PATH에는
+그 폴더가 없었다. 직접 등록한다:
 
 ```powershell
-$bin = "$env:USERPROFILE\.local\bin"      # 1번이 알려준 실제 폴더로 바꾼다
-[Environment]::SetEnvironmentVariable(
-  "Path", [Environment]::GetEnvironmentVariable("Path","User") + ";$bin", "User")
-# 새 창을 열고 확인
+$bin = "$env:USERPROFILE\.local\bin"      # 1번이 알려준 실제 폴더
+
+# 정말 없는지 확인 (아무것도 안 나오면 없는 것)
+$user = [Environment]::GetEnvironmentVariable("Path","User")
+$user -split ';' | Where-Object { $_ -like "*.local\bin*" }
+
+# 중복 없이 영구 등록
+if ($user -notlike "*$bin*") {
+  [Environment]::SetEnvironmentVariable("Path", ($user.TrimEnd(';') + ";$bin"), "User")
+}
+
+# 지금 창에도 즉시 반영
+$env:Path = "$env:Path;$bin"
+claude --version
 ```
+
+등록이 영구적으로 됐는지는 **창을 닫고 새로 열어** 다시 확인한다. 새 창에서
+안 나오면 `SetEnvironmentVariable`이 먹지 않은 것이다.
 
 1번이 아무것도 못 찾으면 설치가 실제로는 안 된 것이다. winget으로 다시 깐다:
 
