@@ -1,0 +1,102 @@
+== PREFLIGHT  2026-08-10 21:18:37 ============================
+   Measured on the target machine. This file is the source of truth for
+   docs/07-agent-pc-design.md §15 — where it disagrees with the document,
+   this file wins.
+
+== OS ========================================================
+edition   : Microsoft Windows 11 Pro
+version   : 10.0.26200 (build 26200)
+
+== CPU / RAM =================================================
+cpu       : Intel(R) Core(TM) Ultra 9 285HX
+cores     : 24 physical / 24 logical      (no SMT)
+ram       : 127 GB
+
+== CHASSIS ===================================================
+type      : LAPTOP (battery present, 99%, on AC)
+
+== GPU =======================================================
+dGPU      : NVIDIA RTX PRO 5000 Blackwell Generation Laptop GPU
+vram      : 24463 MiB  (~24 GB)
+driver    : 591.66
+          : *** BLOCKER *** below the 595.97 Isaac Sim 6.0.1 minimum.
+          : Must be updated before Phase 6.
+iGPU      : Intel(R) Graphics   -> hybrid graphics. Isaac Sim must be
+          : pinned to the NVIDIA adapter (see Phase 0-6).
+
+== DISKS =====================================================
+C:        1,795 GB free of 1,874 GB
+D:        does not exist  ->  all D:\agent paths become C:\agent
+          1.8 TB free is far above the ~270 GB budget; the Isaac Sim
+          asset pack fits comfortably.
+
+== POWER =====================================================
+scheme    : Modern Standby
+sleep     : ONLY "S0 low power idle, network connected" is available.
+          : S1/S2/S3 unsupported by firmware. Hibernate disabled.
+          : Hybrid sleep unavailable. Fast startup unavailable.
+lid/sleep indices : NOT READ - script bug on a Korean-locale Windows
+          : (English Select-String pattern matched nothing, then the
+          : format operator threw on the empty result). Fixed in
+          : 00-preflight.ps1; values are set unconditionally in Phase 0
+          : regardless, so this does not block.
+
+== EXISTING TOOLS ============================================
+winget    : v1.29.280          INSTALLED
+python    : "Python " with no version -> this is the Microsoft Store
+          : App Execution Alias stub, NOT a real interpreter. The alias
+          : must be turned off in Phase 1 or it shadows the real python.
+curl      : present (curl.exe worked for every network probe below)
+git       : absent
+node      : absent
+npm       : absent
+npx       : absent
+docker    : absent
+claude    : absent
+ollama    : absent
+code      : absent
+pwsh      : absent  (report was produced by Windows PowerShell 5.1)
+
+== WSL =======================================================
+wsl.exe   : present, but NO distribution installed
+          : ("run 'wsl.exe --install'")
+
+== WINGET PACKAGE IDS ========================================
+INCONCLUSIVE - script bug. The check matched the English string "Found "
+against output localized to Korean, so every id reported NOT FOUND even
+though winget itself is healthy. Fixed in 00-preflight.ps1 to use the
+exit code instead. Treat all ten ids as unverified, not as missing.
+
+== NETWORK REACHABILITY ======================================
+downloads.isaacsim.nvidia.com    reachable (200)
+api.telegram.org  (CRITICAL)     reachable (302)   <- channel is viable
+workers.dev       (CRITICAL)     reachable (301)   <- 5b is viable
+mcp.notion.com                   reachable (404)
+claude.ai                        reachable (403)
+api.anthropic.com                reachable (404)
+github.com                       reachable (200)
+registry.npmjs.org               reachable (200)
+pypi.org                         reachable (200)
+ngc.nvidia.com                   reachable (301)
+integrate.api.nvidia.com         reachable (404)
+ollama.com                       reachable (200)
+registry-1.docker.io             reachable (404)
+
+proxy env : none set
+
+NOTE: 3xx/4xx here means the host answered, which is all this probe
+tests. No corporate proxy is interfering. The design's network
+assumptions hold.
+
+== VERDICT ===================================================
+GO, with one blocker and four adjustments:
+
+  BLOCKER  GPU driver 591.66 -> must reach 595.97+ before Phase 6.
+
+  ADJUST   1. All D:\agent paths become C:\agent.
+           2. Hybrid graphics: pin Isaac Sim to the NVIDIA adapter.
+           3. Disable the Store python App Execution Alias before
+              installing real Python 3.11.
+           4. Modern Standby (S0) is the only sleep state, so lid
+              action must be "do nothing" on both AC and DC, and
+              heavy jobs should run with the lid open.

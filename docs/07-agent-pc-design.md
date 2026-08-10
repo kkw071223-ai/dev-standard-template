@@ -2,8 +2,9 @@
 
 > 대상: **Windows 11 Pro만 깔려 있고 Claude Desktop 하나만 설치된 모바일 워크스테이션**
 > 목표: 이 PC를 **제2의 뇌 + 상시 가동 자율 에이전트**로 만든다.
-> 기준일: **2026-08-10**
-> 이 문서는 설계서다. 구현 스크립트는 `bootstrap/` (Phase 13에서 생성)에 들어간다.
+> 기준일: **2026-08-10** · 사전 점검 실측 반영 완료
+> 사람이 할 일과 붙여넣을 지시문: [`bootstrap/README.md`](../bootstrap/README.md), [`bootstrap/PROMPT.md`](../bootstrap/PROMPT.md)
+> **실측값이 이 문서보다 우선한다:** [`bootstrap/preflight-report.txt`](../bootstrap/preflight-report.txt)
 
 ---
 
@@ -102,14 +103,29 @@
 
 ## 2. 하드웨어 판독 — 당신의 PC가 실제로 무엇인가
 
-당신이 준 사양과 "가끔 뚜껑이 닫혀 있다"는 말을 합치면 결론이 나온다.
+**사전 점검(2026-08-10) 실측 결과다.** 추정이 아니다.
 
-| 당신이 말한 것 | 실제 정체 (추정) | 근거 |
+| 항목 | 실측값 | 초안의 추정 |
 |---|---|---|
-| "Blackwell Pro 5000, 24GB" | **RTX PRO 5000 Blackwell Laptop GPU (24GB GDDR7)** | 데스크톱 RTX PRO 5000 Blackwell은 48GB다. 24GB는 랩톱 변종 |
-| "i9 Ultra 24코어" | **Core Ultra 9 275HX** (24코어 = 8P+16E, Arrow Lake-HX) | HX는 모바일 워크스테이션 전용 |
-| "뚜껑 닫혀 있고" | **모바일 워크스테이션(노트북)** | 결정적 단서 |
-| 128GB RAM | SODIMM 2×64GB | HX 플랫폼 최대치 |
+| GPU | **NVIDIA RTX PRO 5000 Blackwell Generation Laptop GPU, 24463 MiB** | ✅ 맞음 |
+| GPU 드라이버 | **591.66** | ❌ **블로커** — Isaac Sim 6.0.1은 595.97 이상 필요 |
+| 내장 GPU | **Intel Graphics 동시 존재 (하이브리드)** | ❌ 예상 못 함 — 아래 4번 |
+| CPU | **Core Ultra 9 285HX**, 24물리 / 24논리 (SMT 없음) | ⚠ 275HX로 추정했으나 285HX |
+| RAM | **127 GB** | ✅ 맞음 |
+| 섀시 | **랩톱** (배터리 존재, AC 연결, 99%) | ✅ 맞음 |
+| 디스크 | **C: 1,795 GB 여유 / D: 없음** | ❌ D: 전제가 틀림 |
+| 절전 | **Modern Standby(S0)만. S1/S2/S3 미지원, 최대절전 비활성** | ⚠ 경고했던 그대로 |
+| 네트워크 | **13개 엔드포인트 전부 도달, 프록시 없음** | ✅ 최대 위험 해소 |
+
+### 실측이 설계를 바꾼 네 가지
+
+1. **경로가 `C:\agent`로 바뀌었다.** D: 드라이브가 없다. 대신 C:에 1,795 GB가 비어 있어 §5의 270 GB 예산을 훨씬 넘는다 — **Isaac Sim 에셋 완전팩까지 여유롭게 들어간다.** 이 문서 전체는 `C:\agent` 기준으로 이미 갱신했다.
+
+2. **드라이버 591.66은 블로커다.** Phase 6 전에 595.97 이상으로 올려야 한다. Phase 5a까지는 진행 가능하므로 병렬로 처리한다.
+
+3. **하이브리드 그래픽이다.** Intel 내장 GPU가 함께 있다. Isaac Sim이 내장 GPU에 붙으면 실패한다 — 설정 → 시스템 → 디스플레이 → 그래픽에서 `isaac-sim.bat`과 `python.bat`을 **고성능(NVIDIA)** 으로 고정한다.
+
+4. **Modern Standby(S0)가 유일한 절전 상태다.** S3도 최대절전도 없다. §2의 경고가 그대로 현실이므로 뚜껑 동작을 AC/DC 양쪽 다 "아무것도 안 함"으로 두는 것이 **선택이 아니라 필수**다.
 
 **운용 전제 (사용자 확인):** 평소에는 **AC 연결 + 뚜껑 열림 + 절전 없이 상시 가동.** 다만 **가끔 뚜껑을 닫거나 전원을 끈다.**
 
@@ -155,7 +171,7 @@ graph TB
             CC["Claude Code (headless)<br/>claude -p --output-format stream-json<br/>도메인 워크스페이스에서 실행"]
             ISAAC["Isaac Sim 6.0.1<br/>C:\isaacsim<br/>headless 기본 / GUI 온디맨드"]
             OLL["Ollama<br/>로컬 LLM · 기술검증 전용"]
-            OBS["Obsidian Vault<br/>📁 D:\agent\vault<br/>단일 진실원(SoT)"]
+            OBS["Obsidian Vault<br/>📁 C:\agent\vault<br/>단일 진실원(SoT)"]
             REPO["repo clone<br/>dev-standard-template<br/>SimReady 파이프라인"]
         end
 
@@ -356,7 +372,7 @@ C:\
       ├─ secrets.env             ← API 키. ACL로 본인만. 절대 커밋 금지
       └─ state.json              ← Conductor 재시작 복구용
 
-D:\agent\                        ← 두 번째 볼륨이 없으면 C:\agent
+C:\agent\                        ← 두 번째 볼륨이 없으면 C:\agent
 ├─ vault\                        ← 📕 Obsidian Vault = 단일 진실원 (§6)
 ├─ domains\                      ← 🧱 도메인 워크스페이스 (§9)
 │  ├─ 10-cad2sim\
@@ -388,7 +404,7 @@ D:\agent\                        ← 두 번째 볼륨이 없으면 C:\agent
 | Vault + 런 아티팩트 (1년) | 20 GB |
 | **합계** | **≈ 270 GB** |
 
-> 두 번째 볼륨이 없다면 `D:\agent` → `C:\agent`로 치환하되, C 드라이브 여유가 300GB 미만이면 에셋 완전팩은 나중으로 미룬다 (Isaac Sim은 에셋 없이도 기동된다).
+> 두 번째 볼륨이 없다면 `C:\agent` → `C:\agent`로 치환하되, C 드라이브 여유가 300GB 미만이면 에셋 완전팩은 나중으로 미룬다 (Isaac Sim은 에셋 없이도 기동된다).
 
 ---
 
@@ -401,7 +417,7 @@ D:\agent\                        ← 두 번째 볼륨이 없으면 C:\agent
 > **Obsidian은 "폴더 안의 마크다운 파일 뭉치"를 위키처럼 보여주는 뷰어다.**
 
 핵심은 이거다. Obsidian은 데이터베이스가 아니다. 서버도 아니다. 클라우드도 아니다.
-`D:\agent\vault\` 폴더에 있는 `.md` 텍스트 파일들이 전부다. Obsidian을 지워도 파일은 그대로 남는다.
+`C:\agent\vault\` 폴더에 있는 `.md` 텍스트 파일들이 전부다. Obsidian을 지워도 파일은 그대로 남는다.
 
 ### 6.2 "LLM 위키인가?" — 반은 맞다
 
@@ -426,7 +442,7 @@ Notion으로 이걸 하려면 매번 API 호출이고, 레이트리밋에 걸리
 
 | 용어 | 뜻 | 예 |
 |---|---|---|
-| **Vault (볼트)** | 노트가 들어있는 최상위 폴더. Obsidian은 볼트 단위로 연다 | `D:\agent\vault` |
+| **Vault (볼트)** | 노트가 들어있는 최상위 폴더. Obsidian은 볼트 단위로 연다 | `C:\agent\vault` |
 | **Note (노트)** | `.md` 파일 하나 | `20-facts/FCT-2026-0810-001.md` |
 | **`[[위키링크]]`** | 다른 노트로 가는 링크. 대상이 없으면 클릭 시 생성됨 | `근거: [[RUN-20260810-1432]]` |
 | **Frontmatter** | 파일 맨 위 `---` 사이의 YAML. 노트의 메타데이터 | `domain: 50-physics` |
@@ -445,7 +461,7 @@ Notion으로 이걸 하려면 매번 API 호출이고, 레이트리밋에 걸리
 ### 6.5 볼트 스키마
 
 ```
-D:\agent\vault\
+C:\agent\vault\
 ├─ 00-inbox\                  ← 분류 전 아무거나. 매일 비운다
 ├─ 10-domains\                ← 도메인별 상설 지식
 │  ├─ 10-cad2sim\
@@ -626,7 +642,7 @@ sequenceDiagram
 수치   에너지 드리프트 0.31% (임계 2%)
        관통 0건 · NaN 0건
 검증   sim_check.py exit=0
-아티팩트 D:\agent\domains\50-physics\runs\20260810-1432-cartpole\
+아티팩트 C:\agent\domains\50-physics\runs\20260810-1432-cartpole\
 노트   [[RUN-20260810-1432-cartpole]]
 ```
 
@@ -664,7 +680,7 @@ sequenceDiagram
 ### 9.1 도메인 격리
 
 ```
-D:\agent\domains\<도메인>\
+C:\agent\domains\<도메인>\
 ├─ CLAUDE.md          ← 🔒 이 도메인의 계약서. 세션 시작 시 자동 로드
 ├─ inbox\             ← 원본 입력 (도면, 영상, 데이터). 읽기 전용 취급
 ├─ runs\              ← 실행 결과. 불변 (§9.2)
@@ -676,7 +692,7 @@ D:\agent\domains\<도메인>\
 **Conductor는 Claude Code를 반드시 도메인 루트를 cwd로 하여 기동한다.**
 
 ```powershell
-cd D:\agent\domains\50-physics
+cd C:\agent\domains\50-physics
 claude -p "<잡 프롬프트>" --output-format stream-json
 ```
 
@@ -687,7 +703,7 @@ claude -p "<잡 프롬프트>" --output-format stream-json
 
 ## 경계
 - 이 도메인 밖의 파일을 읽지 않는다.
-  예외: 다른 도메인의 `exports/` 하위, 그리고 `D:\agent\vault\20-facts\`
+  예외: 다른 도메인의 `exports/` 하위, 그리고 `C:\agent\vault\20-facts\`
 - 다른 도메인에 쓰지 않는다. 넘길 것은 `exports/`에 둔다.
 
 ## 사실 규칙
@@ -987,7 +1003,7 @@ flowchart TD
 
 ### 12.2 완전 자율 (승인 불요)
 
-- 파일 생성·수정·삭제 (`D:\agent\` 및 도메인 워크스페이스 내)
+- 파일 생성·수정·삭제 (`C:\agent\` 및 도메인 워크스페이스 내)
 - 무료 API·로컬 모델 호출, Claude Max 구독 내 호출
 - 패키지 설치 (도메인 `.venv` 내부)
 - Isaac Sim / DeepStream / NemoClaw 실행
@@ -1020,9 +1036,11 @@ flowchart TD
 ```powershell
 # 관리자 PowerShell
 
-# 0-1. GPU 드라이버 확인 — Isaac Sim 6.0.1은 595.97 이상 필요
+# 0-1. GPU 드라이버 — 실측 591.66, 필요 595.97+. 이게 유일한 블로커다.
 nvidia-smi
-# Driver Version이 595.97 미만이면 NVIDIA 앱 또는 nvidia.com에서 갱신
+#   미만이면 NVIDIA 앱 또는 nvidia.com에서 RTX PRO 5000 Blackwell Laptop GPU용
+#   최신 드라이버를 받아 설치하고 재부팅한다. Studio/Production Branch 권장.
+#   Phase 5a까지는 이거 없이도 진행되므로 병렬로 처리해도 된다.
 
 # 0-2. 절전 금지 + 뚜껑 닫아도 계속 돌게
 #   평소: AC 연결 + 뚜껑 열림 + 상시 가동.
@@ -1052,25 +1070,46 @@ wsl --install -d Ubuntu-24.04
 wsl --set-default-version 2
 # 재부팅 필요할 수 있음
 
-# 0-5. 작업 디렉터리
-New-Item -ItemType Directory -Force -Path D:\agent\{vault,domains,conductor,repos,models,isaac-assets,scratch}
+# 0-5. 작업 디렉터리 (실측: D: 없음 → C:. 1,795 GB 여유)
+New-Item -ItemType Directory -Force -Path C:\agent\vault,C:\agent\domains,C:\agent\conductor,C:\agent\repos,C:\agent\models,C:\agent\isaac-assets,C:\agent\scratch
 New-Item -ItemType Directory -Force -Path $env:USERPROFILE\.agent
+
+# 0-6. 하이브리드 그래픽 — Intel 내장 GPU가 함께 있다 (실측).
+#   Isaac Sim이 내장 GPU에 붙으면 실패한다. NVIDIA로 고정한다:
+#   설정 > 시스템 > 디스플레이 > 그래픽 > 앱 추가(데스크톱 앱)
+#     C:\isaacsim\isaac-sim.bat  -> 고성능
+#     C:\isaacsim\python.bat     -> 고성능
+#   (Phase 6에서 Isaac Sim을 깐 뒤에 등록한다. 지금은 경로가 없다.)
+start ms-settings:display-advancedgraphics
 ```
 
 **✔ 확인**
 ```powershell
 nvidia-smi                    # 595.97 이상
-powercfg /q SCHEME_CURRENT SUB_BUTTONS LIDACTION   # AC Power Setting Index: 0x00000000
+# powercfg 출력은 한국어로 현지화되므로 영어 문자열로 매칭하지 말 것.
+# 마지막 두 hex가 각각 AC, DC 인덱스다. 둘 다 0x00000000 이어야 한다.
+(powercfg /q SCHEME_CURRENT SUB_BUTTONS LIDACTION | Out-String) `
+  -split "`n" | Select-String -Pattern '0x[0-9a-fA-F]{8}' | Select-Object -Last 2
 wsl -l -v                     # Ubuntu-24.04  Running  2
-Test-Path D:\agent\vault      # True
+Test-Path C:\agent\vault      # True
 ```
 
 ---
 
 ### Phase 1 — 기본 툴체인 (20분)
 
+**1-0. 먼저 Store의 python 별칭을 끈다.** 실측에서 `python --version`이 버전 없이
+`Python `만 출력했다 — 이건 Microsoft Store App Execution Alias 스텁이고 실제
+인터프리터가 아니다. **끄지 않으면 진짜 Python 3.11을 깔아도 PATH에서 이 스텁이
+먼저 잡힌다.**
+
 ```powershell
-winget install --id Git.Git -e --accept-package-agreements
+start ms-settings:advanced-apps
+# 앱 실행 별칭 > python.exe / python3.exe 를 모두 끔
+```
+
+```powershell
+winget install --id Git.Git -e --accept-package-agreements --accept-source-agreements
 winget install --id Python.Python.3.11 -e        # Isaac Sim 6.0.1은 Python 3.11 기준
 winget install --id OpenJS.NodeJS.LTS -e         # npx skills 용 (Node 22.19+ 필요)
 winget install --id Microsoft.PowerShell -e      # PowerShell 7
@@ -1079,11 +1118,18 @@ winget install --id 7zip.7zip -e
 winget install --id Obsidian.Obsidian -e
 ```
 
-**✔ 확인**
+**✔ 확인** — 새 PowerShell 창에서 (PATH를 다시 읽어야 한다)
 ```powershell
 git --version; python --version; node --version; npm --version; pwsh --version
-# python 3.11.x, node 22.x 이상
+# python 은 반드시 "Python 3.11.x" 로 나와야 한다.
+# 그냥 "Python " 이면 Store 별칭이 아직 살아 있는 것이다 — 1-0으로 돌아간다.
+(Get-Command python).Source     # C:\Users\...\AppData\Local\Programs\Python\... 여야 함
+                                # WindowsApps 경로면 여전히 스텁이다
 ```
+
+> **winget ID 10종은 "미확인"이지 "없음"이 아니다.** 1차 사전 점검이 영어 문자열
+> `Found `를 한국어 출력에 매칭해 전부 NOT FOUND로 잘못 보고했다. 설치가 실패하면
+> 종료 코드로 판정하라: `winget show --id <ID> -e; $LASTEXITCODE`
 
 ---
 
@@ -1134,7 +1180,7 @@ claude -p "이 폴더의 파일 개수를 세라" --output-format stream-json --
 
 ### Phase 3 — Obsidian Vault (30분)
 
-1. Obsidian 실행 → **Open folder as vault** → `D:\agent\vault`
+1. Obsidian 실행 → **Open folder as vault** → `C:\agent\vault`
 2. §6.5 폴더 구조 생성
 3. 설정 → 커뮤니티 플러그인 활성화 → **Dataview**, **Templater**, **Obsidian Git** 설치·활성화
 4. Obsidian Git: 자동 커밋 10분, 자동 푸시 켜기. 먼저 GitHub 프라이빗 repo(`agent-vault`) 생성 후 `git remote add`
@@ -1172,8 +1218,8 @@ claude -p "Notion의 Runs DB에 테스트 행 하나 추가하고 다시 읽어�
 
 **5a-2. Conductor 골격**
 ```powershell
-python -m venv D:\agent\conductor\.venv
-D:\agent\conductor\.venv\Scripts\pip install httpx pydantic rich apscheduler
+python -m venv C:\agent\conductor\.venv
+C:\agent\conductor\.venv\Scripts\pip install httpx pydantic rich apscheduler
 ```
 `%USERPROFILE%\.agent\secrets.env`:
 ```
@@ -1243,7 +1289,7 @@ cd C:\isaacsim
 ```powershell
 1..5 | ForEach-Object {
   $n = "{0:D3}" -f $_
-  curl.exe -L -o "D:\agent\isaac-assets\isaac-sim-assets-complete-6.0.1.$n.zip" `
+  curl.exe -L -o "C:\agent\isaac-assets\isaac-sim-assets-complete-6.0.1.$n.zip" `
     "https://downloads.isaacsim.nvidia.com/isaac-sim-assets-complete-6.0.1.$n.zip"
 }
 ```
@@ -1318,7 +1364,7 @@ docker run --rm --gpus all nvidia/cuda:12.8.0-base-ubuntu24.04 nvidia-smi   # GP
 winget install --id Ollama.Ollama -e
 
 # 모델 저장 위치를 D 드라이브로
-[Environment]::SetEnvironmentVariable("OLLAMA_MODELS", "D:\agent\models\ollama", "User")
+[Environment]::SetEnvironmentVariable("OLLAMA_MODELS", "C:\agent\models\ollama", "User")
 # 유휴 5분 후 VRAM 자동 반납 — SIM 모드 충돌 방지의 1차 방어선
 [Environment]::SetEnvironmentVariable("OLLAMA_KEEP_ALIVE", "5m", "User")
 # 트레이 앱 종료 후 재시작 (환경변수 반영)
@@ -1327,7 +1373,7 @@ ollama pull <14B급 모델>     # ⚠ 정확한 태그는 `ollama list` / 레지
 ollama pull <8B급 모델>      # HEADLESS 모드 상주용
 ```
 
-`D:\agent\conductor\vram_mode.ps1` (Conductor가 호출):
+`C:\agent\conductor\vram_mode.ps1` (Conductor가 호출):
 ```powershell
 param([ValidateSet("headless","sim","think")][string]$Mode)
 
@@ -1386,7 +1432,7 @@ claude -p "설치된 nvidia 스킬을 나열하고, omniverse-cad-to-simready의
 ### Phase 10 — 도메인 워크스페이스 + 파이프라인 (1시간)
 
 ```powershell
-cd D:\agent\repos
+cd C:\agent\repos
 git clone https://github.com/kkw071223-ai/dev-standard-template.git
 cd dev-standard-template
 # bootstrap_env.sh는 리눅스 스크립트 — WSL에서 돌린다
@@ -1412,7 +1458,7 @@ wsl bash -lc "cd /mnt/d/agent/repos/dev-standard-template && \
 
 **11-1. 자동 시작** — 작업 스케줄러
 - 트리거: 로그온 시 + 매일 03:00 (`40-brain` 야간 잡)
-- 동작: `D:\agent\conductor\.venv\Scripts\python.exe D:\agent\conductor\conductor.py`
+- 동작: `C:\agent\conductor\.venv\Scripts\python.exe C:\agent\conductor\conductor.py`
 - 설정: "AC 전원일 때만 실행" **해제**, "작업 실행 시 컴퓨터 절전 해제" **체크**
 
 > 뚜껑 닫힌 상태에서도 돌게 하려면 로그온 세션이 유지되어야 한다. 재부팅 후 자동 로그인이 필요하면 `netplwiz`로 설정한다. (당신이 보안은 신경쓰지 말라고 했으므로 이 선택이 가능하다.)
@@ -1505,19 +1551,37 @@ wsl bash -lc "cd /mnt/d/agent/repos/dev-standard-template && \
 | `usd-core`와 `usd-exchange` 동거 시 인터프리터 abort | 재현 확인, `docs/02-verified-findings.md` |
 | 실루엣 교차 복원 정확도: L-블록 192.61 vs 192.00 cm³ (0.32% 오차) | `orthoviews_to_solid.py --self-test` |
 
-### `assumed` — ⚠ 추정. 확인 필요
+### `verified` — 대상 PC에서 사전 점검으로 실측 (2026-08-10)
+
+초안의 ⚠ 7건 중 **6건이 여기로 올라왔다.** 전부 [`bootstrap/preflight-report.txt`](../bootstrap/preflight-report.txt)가 근거다.
+
+| 사실 | 판정 |
+|---|---|
+| GPU = RTX PRO 5000 Blackwell **Laptop** GPU, 24463 MiB | 추정이 맞았음 |
+| CPU = Core Ultra 9 **285HX**, 24물리/24논리 | 275HX 추정을 정정 |
+| RAM 127 GB, 섀시 = 랩톱 (배터리 존재) | 추정이 맞았음 |
+| **GPU 드라이버 591.66** — Isaac Sim 6.0.1 최소 595.97 미만 | **블로커** |
+| **Intel 내장 GPU 동시 존재** (하이브리드) | 예상 못 했던 항목 |
+| **D: 볼륨 없음. C: 1,795 GB 여유** | 전제가 틀렸음 → `C:\agent` |
+| **Modern Standby(S0)만 지원.** S1/S2/S3 미지원, 최대절전 비활성 | 경고했던 그대로 |
+| `python`이 Microsoft Store **App Execution Alias 스텁** (실제 인터프리터 아님) | 예상 못 했던 항목 |
+| winget v1.29.280 설치됨. git/node/docker/claude/ollama/code/pwsh 전부 없음. WSL 배포판 없음 | 백지 상태 확인 |
+| **13개 엔드포인트 전부 도달, 프록시 없음** — `api.telegram.org`(302), `workers.dev`(301) 포함 | **최대 위험 해소** |
+
+> 마지막 줄이 가장 중요하다. 사내 프록시가 텔레그램을 막았다면 §8 전체를 다시 설계해야 했다. 뚫려 있으므로 설계가 그대로 성립한다.
+
+### `assumed` — ⚠ 남은 추정
 
 | 추정 | 확인 방법 |
 |---|---|
-| ⚠ GPU가 **RTX PRO 5000 Blackwell Laptop (24GB)**, CPU가 **Core Ultra 9 275HX** | `nvidia-smi -L` / `wmic cpu get name` |
-| ⚠ `D:` 볼륨이 존재하고 300GB 이상 여유 | `Get-PSDrive D` |
-| ⚠ winget ID: `Git.Git`, `Python.Python.3.11`, `OpenJS.NodeJS.LTS`, `Obsidian.Obsidian`, `Docker.DockerDesktop`, `7zip.7zip` | `winget search <이름>` |
-| ⚠ §4.1의 VRAM 소비량 수치 (씬·모델에 따라 크게 변동) | 실측 후 사실 카드로 갱신 |
+| ⚠ winget ID 10종 | **미확인이지 없는 게 아니다.** 1차 점검이 영어 문자열 `Found `를 한국어 출력에 매칭해 전부 NOT FOUND로 잘못 보고했다. 스크립트는 종료 코드 기반으로 고쳤다 — Phase 1에서 `winget show --id <ID> -e` 종료 코드로 판정 |
+| ⚠ 뚜껑·절전 인덱스 현재값 | 같은 로케일 버그로 읽지 못했다. Phase 0에서 **어차피 무조건 설정**하므로 블로커는 아니다 |
+| ⚠ §4.1의 VRAM 소비량 수치 | 씬·모델에 따라 크게 변동. 실측 후 사실 카드로 갱신 |
 | ⚠ Ollama 모델 태그 이름 | `ollama list` / 레지스트리 |
 | ⚠ Isaac Sim 첫 기동 셰이더 컴파일 10~30분 | 실측 |
-| ⚠ 사내 네트워크가 `downloads.isaacsim.nvidia.com`, `mcp.notion.com`, `api.telegram.org`, `*.workers.dev`를 막지 않음 | Phase 0에서 `curl`로 사전 확인 권장 |
+| ⚠ VS Code 확장 ID `anthropic.claude-code` | 마켓플레이스에서 확인 |
 
-> 마지막 항목이 실제로 가장 흔한 실패 원인이다. **Phase 0에서 먼저 확인하라.** 사내 프록시가 텔레그램을 막으면 §8 전체가 무너지고 설계를 다시 해야 한다.
+> **1차 점검 스크립트의 로케일 버그 2건은 정직하게 남긴다.** 한국어 Windows에서 `powercfg`와 `winget`의 출력이 현지화되는데 영어 문자열로 매칭했다. 전자는 빈 결과에 포맷 연산자가 예외를 던져 세 줄이 통째로 사라졌고, 후자는 멀쩡한 패키지 10개를 전부 "없음"으로 보고했다. **둘 다 "확인했다"가 아니라 "확인 못 했다"로 취급해야 한다.** 스크립트는 hex 인덱스와 종료 코드를 쓰도록 고쳤다.
 
 ---
 
@@ -1604,7 +1668,7 @@ claude          # 브라우저가 열린다. Claude Max 계정으로 로그인
 설치가 끝나면 작업 폴더에서 Claude Code를 열고 이렇게 지시한다:
 
 ```
-D:\agent\repos\dev-standard-template 를 clone하고
+C:\agent\repos\dev-standard-template 를 clone하고
 docs/07-agent-pc-design.md 를 읽어라.
 bootstrap/preflight-report.txt 가 실측 결과다 — §15의 ⚠ 항목은
 이 파일로 대체하고, 문서의 추정값을 그대로 믿지 마라.
