@@ -615,7 +615,7 @@ runs/20260810-1432-cartpole/
 
 Vault `20-facts/`에 들어가는 노트 하나 = 검증된 사실 하나.
 
-```markdown
+````markdown
 ---
 id: FCT-2026-0810-001
 domain: 50-physics
@@ -638,7 +638,7 @@ penetrations: 0
 nan steps: 0
 exit 0
 ```
-```
+````
 
 **신뢰도 3단계와 그 의미:**
 
@@ -1107,16 +1107,18 @@ nvidia-smi     # Windows 드라이버가 보이면 정상
 docker run --rm --gpus all nvidia/cuda:12.8.0-base-ubuntu24.04 nvidia-smi
 ```
 
-> Docker Desktop을 쓰는 한 **WSL 배포판 안에 nvidia-container-toolkit을 설치할 필요가 없다.** Docker Desktop이 GPU 패스스루를 처리한다. 위 `docker run`이 실패할 때만, 그리고 Docker Desktop 대신 WSL 안에서 네이티브 `dockerd`를 쓰는 경우에만 툴킷을 설치한다:
-> ```bash
-> curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
->   sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-> curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
->   sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
->   sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-> sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
-> sudo nvidia-ctk runtime configure --runtime=docker
-> ```
+> Docker Desktop을 쓰는 한 **WSL 배포판 안에 nvidia-container-toolkit을 설치할 필요가 없다.** Docker Desktop이 GPU 패스스루를 처리한다. 아래 블록은 위 `docker run`이 실패할 때만, 그리고 Docker Desktop 대신 WSL 안에서 네이티브 `dockerd`를 쓰는 경우에만 실행한다.
+
+```bash
+# ⚠ 위 docker run이 성공했다면 이 블록은 건너뛴다
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+  sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+  sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+  sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
+```
 
 CUDA 툴킷이 WSL 안에 필요하면 (**`cuda-toolkit-12-x` 메타패키지만**, `cuda`/`cuda-drivers`는 리눅스 드라이버를 끌고 오므로 금지):
 ```bash
