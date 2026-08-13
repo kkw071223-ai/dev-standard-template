@@ -71,15 +71,36 @@ say "SimReady venv  ->  $SR_VENV"
 echo "  simready-validate: $("$SR_VENV/bin/pip" show simready-validate | awk '/^Version/{print $2}')"
 
 # ------------------------------------------------------- SimReady Foundation
+# The spec is executable Python that runs inside .venv-simready, so it is a
+# pinned dependency exactly like the wheels above — not a "latest is fine"
+# checkout. Release 2026.06.0 (0ed0dfb, 2026-08-03) breaks this pipeline twice:
+#   * profiles/profiles.toml was split into per-profile TOMLs, so
+#     --profiles-path .../profiles.toml resolves to nothing and every asset
+#     reports "Profile <id> not found" with an empty features_summary;
+#   * PMT.001 dies with "type object 'Tokens' has no attribute 'physics'"
+#     against the usd-core 26.8 this repo pins.
+# 4d9f3bb is the tree as of the 2026-07-25 verification run.
+SIMREADY_FOUNDATION_REF="${SIMREADY_FOUNDATION_REF:-4d9f3bb}"
+
 say "SimReady Foundation specs  ->  $UPSTREAM_ROOT/simready-foundation"
 mkdir -p "$UPSTREAM_ROOT"
-if [ -d "$UPSTREAM_ROOT/simready-foundation/.git" ]; then
-  echo "  already present"
-else
-  git clone --depth 1 -b main \
+if [ ! -d "$UPSTREAM_ROOT/simready-foundation/.git" ]; then
+  # Not --depth 1: the pinned ref is not the branch tip.
+  git clone -b main \
     https://github.com/NVIDIA/simready-foundation.git \
     "$UPSTREAM_ROOT/simready-foundation" 2>&1 | tail -1
 fi
+
+(
+  cd "$UPSTREAM_ROOT/simready-foundation"
+  # An existing checkout may be shallow from an older bootstrap.
+  [ "$(git rev-parse --is-shallow-repository)" = "true" ] && \
+    git fetch --unshallow --quiet 2>/dev/null || true
+  git rev-parse --verify --quiet "$SIMREADY_FOUNDATION_REF^{commit}" >/dev/null || \
+    git fetch --quiet origin 2>/dev/null || true
+  git checkout --quiet "$SIMREADY_FOUNDATION_REF"
+)
+echo "  pinned at $(git -C "$UPSTREAM_ROOT/simready-foundation" log -1 --format='%h %ci')"
 
 SPECS="$UPSTREAM_ROOT/simready-foundation/nv_core/sr_specs/docs"
 for d in capabilities features profiles; do

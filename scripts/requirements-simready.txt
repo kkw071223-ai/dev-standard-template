@@ -13,3 +13,13 @@ usd-core==26.8
 omniverse-asset-validator==1.18.0
 omniverse-usd-profiles==1.10.22
 numpy==2.4.6
+
+# The spec's capabilities/ modules are imported *into this venv* by
+# simready-validate, and capabilities/core/atomic_asset/validation.py does
+#   from usd_validation_nvidia import ...
+# Without it every profile load dies with ModuleNotFoundError and the CLI
+# writes no --output at all — which the pipeline surfaces only as
+# "(no report: [Errno 2] No such file or directory: .../simready-after.json)".
+# It has no dependencies of its own, so it does not drag usd-exchange in and
+# the two-OpenUSD rule above still holds.
+usd-validation-nvidia==1.20.0
